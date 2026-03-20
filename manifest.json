@@ -1,0 +1,25 @@
+{
+“name”: “BBMA Scanner Pro”,
+“short_name”: “BBMA Pro”,
+“description”: “BBMA OMA MTF Scanner — Golden RE, EMA50, Multi-Timeframe Confirmation”,
+“start_url”: “/fake-insider-bbma-scanner/”,
+“scope”: “/fake-insider-bbma-scanner/”,
+“display”: “standalone”,
+“orientation”: “portrait”,
+“background_color”: “#0d1117”,
+“theme_color”: “#FFD700”,
+“icons”: [
+{
+“src”: “icon-192.png”,
+“sizes”: “192x192”,
+“type”: “image/png”,
+“purpose”: “any maskable”
+},
+{
+“src”: “icon-512.png”,
+“sizes”: “512x512”,
+“type”: “image/png”,
+“purpose”: “any maskable”
+}
+]
+}

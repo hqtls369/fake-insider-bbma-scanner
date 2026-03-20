@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BBMA Scanner Pro MTF</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;padding:16px}
+.card{background:#161b22;border-radius:10px;padding:13px;margin-bottom:10px;border:1px solid #21262d}
+.btn{padding:5px 11px;border-radius:5px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:#21262d;color:#8b949e;transition:all .1s}
+.btn.active{background:#1f6feb;color:#fff}
+.btn-row{display:flex;gap:3px;flex-wrap:wrap}
+.tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;display:inline-block}
+.progress-bar{background:#21262d;border-radius:4px;height:4px;overflow:hidden}
+.progress-fill{height:100%;transition:width .2s}
+.log-box{background:#0d1117;border-radius:6px;padding:8px 12px;max-height:100px;overflow-y:auto;margin-top:8px;font-family:monospace;font-size:10px;line-height:1.8}
+.tab{padding:8px 14px;border-radius:8px 8px 0 0;border:none;cursor:pointer;font-weight:700;font-size:12px;background:#0d1117;color:#484f58;border-bottom:2px solid #21262d}
+.tab.active{background:#161b22}
+.panel{background:#161b22;border-radius:0 8px 8px 8px;border:1px solid #21262d;padding:13px;min-height:200px}
+.result-card{background:#0d1117;border-radius:10px;padding:13px;margin-bottom:8px}
+.mtf-row{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
+.mtf-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;display:flex;align-items:center;gap:3px}
+.ind-grid{display:flex;gap:10px;flex-wrap:wrap;align-items:center;flex:1;min-width:0}
+.ind-item{min-width:52px}
+.ind-label{font-size:9px;font-weight:600;margin-bottom:1px}
+.ind-val{font-size:11px;font-weight:600;color:#e6edf3}
+.score-bg{background:#21262d;border-radius:3px;height:3px;margin-top:2px}
+.ctrl-label{font-size:9px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.summary-box{background:#0d1117;border:1px solid #21262d;border-radius:7px;padding:6px 12px;display:flex;gap:6px;align-items:center}
+.filter-btn{padding:4px 10px;border-radius:5px;border:1px solid #30363d;cursor:pointer;font-size:10px;font-weight:600;background:transparent;color:#8b949e}
+.filter-btn.active{border-color:#FFD70070;background:#FFD70015;color:#FFD700}
+canvas{display:block;border-radius:4px}
+</style>
+</head>
+<body>
+<div style="max-width:960px;margin:0 auto">
+
+<!-- Header -->
+
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+  <span style="font-size:20px">📊</span>
+  <h1 style="font-size:17px;font-weight:700">BBMA Scanner Pro</h1>
+  <span style="background:#FFD70022;color:#FFD700;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;border:1px solid #FFD70050">MTF H4·H1·M15</span>
+</div>
+<p style="margin:0 0 12px 28px;font-size:11px;color:#8b949e">
+  Multi-Timeframe Confirmation · <span style="color:#FFD700">Golden RE</span> · <span style="color:#e3b341">RE Klasik</span> · <span style="color:#9d7cd8">Pullback</span> · <span style="color:#f0b429">Extreme</span> · <span style="color:#3dc9b0">CSM</span>
+</p>
+
+<!-- MTF Logic Info -->
+
+<div style="background:#1f6feb15;border:1px solid #1f6feb40;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:#8b949e;line-height:1.8">
+  <strong style="color:#58a6ff">📐 Logika MTF:</strong>
+  <span style="color:#f0b429">H4</span> = Bias utama &nbsp;→&nbsp;
+  <span style="color:#e3b341">H1</span> = Konfirmasi arah &nbsp;→&nbsp;
+  <span style="color:#3dc9b0">M15</span> = Entry timing &nbsp;·&nbsp;
+  <strong style="color:#3fb950">✅ CONFIRM</strong> hanya jika ketiga TF selaras
+</div>
+
+<!-- Controls -->
+
+<div class="card">
+  <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+    <div>
+      <div class="ctrl-label">Mode Scan</div>
+      <div class="btn-row">
+        <button class="btn active" id="modeConfirm" onclick="setMode('CONFIRM')">✅ MTF Confirm</button>
+        <button class="btn" id="modeSingle" onclick="setMode('SINGLE')">Single TF</button>
+      </div>
+    </div>
+    <div id="singleTFGroup" style="display:none">
+      <div class="ctrl-label">Timeframe</div>
+      <div class="btn-row" id="tfBtns">
+        <button class="btn" onclick="setTF('15m')">15M</button>
+        <button class="btn active" onclick="setTF('1h')">1H</button>
+        <button class="btn" onclick="setTF('4h')">4H</button>
+        <button class="btn" onclick="setTF('1d')">1D</button>
+      </div>
+    </div>
+    <div>
+      <div class="ctrl-label">Arah</div>
+      <div class="btn-row">
+        <button class="btn active" id="dirAll" onclick="setDir('ALL')">ALL</button>
+        <button class="btn" id="dirLong" onclick="setDir('LONG')">LONG</button>
+        <button class="btn" id="dirShort" onclick="setDir('SHORT')">SHORT</button>
+      </div>
+    </div>
+    <div style="flex:1;min-width:150px">
+      <div class="ctrl-label">Threshold: <span id="threshLabel" style="color:#58a6ff;font-weight:700">2.5%</span></div>
+      <input type="range" id="threshSlider" min="0.5" max="5" step="0.5" value="2.5"
+        oninput="document.getElementById('threshLabel').textContent=this.value+'%'"
+        style="width:100%;accent-color:#1f6feb;cursor:pointer">
+    </div>
+    <div style="display:flex;gap:6px;align-self:flex-end">
+      <button id="scanBtn" onclick="startScan()" style="padding:8px 20px;background:#FFD700;color:#000;border:none;border-radius:7px;cursor:pointer;font-weight:800;font-size:13px">⭐ SCAN</button>
+      <button id="stopBtn" onclick="stopScan()" style="display:none;padding:8px 20px;background:#b62324;color:#fff;border:none;border-radius:7px;cursor:pointer;font-weight:700;font-size:13px">⏹ STOP</button>
+    </div>
+  </div>
+
+  <div id="progressArea" style="display:none;margin-top:12px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+      <span id="statusMsg" style="font-size:10px;color:#8b949e;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <span id="progressPct" style="font-size:10px;color:#FFD700;font-weight:700;margin-left:8px">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%;background:linear-gradient(90deg,#1f6feb,#FFD700)"></div></div>
+    <div class="log-box" id="logBox"></div>
+  </div>
+  <div id="doneMsg" style="display:none;margin-top:8px;font-size:11px;font-weight:600;color:#3fb950"></div>
+</div>
+
+<!-- Tabs -->
+
+<div style="display:flex;gap:2px">
+  <button class="tab active" id="tabGolden" onclick="setTab('GOLDEN')" style="color:#FFD700;border-bottom:2px solid #FFD700">
+    ⭐ Golden RE <span id="cntGolden" style="background:#21262d;color:#FFD700;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px">0</span>
+  </button>
+  <button class="tab" id="tabRE" onclick="setTab('RE')" style="color:#484f58">
+    🔁 Re-Entry <span id="cntRE" style="background:#21262d;color:#e3b341;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px">0</span>
+  </button>
+</div>
+
+<div class="panel">
+  <div id="reFilters" style="display:none;flex-wrap:wrap;gap:4px;margin-bottom:12px">
+    <button class="filter-btn active" onclick="setSetupFilter('ALL',this)">Semua</button>
+    <button class="filter-btn" onclick="setSetupFilter('RE_KLASIK',this)">RE Klasik</button>
+    <button class="filter-btn" onclick="setSetupFilter('PULLBACK',this)">Pullback</button>
+    <button class="filter-btn" onclick="setSetupFilter('EXTREME',this)">Extreme</button>
+    <button class="filter-btn" onclick="setSetupFilter('CSM',this)">CSM</button>
+  </div>
+
+  <div id="summaryRow" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+    <div class="summary-box"><span id="sumTotal" style="font-size:18px;font-weight:700;color:#FFD700">0</span><span style="font-size:10px;color:#8b949e">Total</span></div>
+    <div class="summary-box"><span id="sumLong" style="font-size:18px;font-weight:700;color:#3fb950">0</span><span style="font-size:10px;color:#8b949e">Long</span></div>
+    <div class="summary-box"><span id="sumShort" style="font-size:18px;font-weight:700;color:#f85149">0</span><span style="font-size:10px;color:#8b949e">Short</span></div>
+    <div class="summary-box" id="sumConfirmBox" style="display:none"><span id="sumConfirm" style="font-size:18px;font-weight:700;color:#3fb950">0</span><span style="font-size:10px;color:#8b949e">MTF Confirm</span></div>
+  </div>
+
+  <div id="resultsContainer"></div>
+
+  <div id="emptyState" style="text-align:center;padding:50px 20px">
+    <div style="font-size:36px;margin-bottom:12px">📐</div>
+    <p style="font-size:14px;font-weight:700;color:#FFD700;margin-bottom:8px">BBMA MTF Scanner</p>
+    <p style="font-size:11px;color:#8b949e;margin-bottom:4px">Mode <strong style="color:#58a6ff">MTF Confirm</strong>: hanya tampilkan signal yang selaras di H4, H1, dan M15</p>
+    <p style="font-size:10px;color:#484f58">Klik ⭐ SCAN untuk mulai</p>
+  </div>
+  <div id="noResultState" style="display:none;text-align:center;padding:28px;color:#8b949e;font-size:12px">
+    Tidak ada signal terkonfirmasi. Coba naikkan threshold atau mode Single TF.
+  </div>
+</div>
+
+</div><!-- end wrapper -->
+
+<script>
+// ── State ──
+let scanMode='CONFIRM'; // 'CONFIRM' | 'SINGLE'
+let singleTF='1h';
+let dirFilter='ALL';
+let setupFilter='ALL';
+let activeTab='GOLDEN';
+let allResults=[];
+let scanning=false;
+let aborted=false;
+
+const MTF_TFS=['4h','1h','15m'];
+const MTF_LABELS={
+  '4h':{label:'H4',color:'#f0b429'},
+  '1h':{label:'H1',color:'#e3b341'},
+  '15m':{label:'M15',color:'#3dc9b0'}
+};
+
+const META={
+  GOLDEN_RE:{label:'Golden RE',color:'#FFD700',icon:'⭐'},
+  RE_KLASIK:{label:'RE Klasik',color:'#e3b341',icon:'🔄'},
+  PULLBACK: {label:'Pullback', color:'#9d7cd8',icon:'↩️'},
+  EXTREME:  {label:'Extreme', color:'#f0b429',icon:'⚡'},
+  CSM:      {label:'CSM',     color:'#3dc9b0',icon:'🔹'},
+};
+
+// ── Math ──
+const sma=(a,n)=>a.length<n?null:a.slice(-n).reduce((s,v)=>s+v,0)/n;
+function bbCalc(a,n=20){
+  if(a.length<n) return null;
+  const sl=a.slice(-n),mid=sl.reduce((s,v)=>s+v,0)/n;
+  const std=Math.sqrt(sl.reduce((s,v)=>s+(v-mid)**2,0)/n);
+  return{mid,upper:mid+2*std,lower:mid-2*std};
+}
+const pct=(a,b)=>b===0?999:Math.abs(a-b)/b*100;
+function fmt(n){
+  if(n==null||isNaN(n)) return'-';
+  if(n>=10000) return n.toLocaleString('en',{maximumFractionDigits:0});
+  if(n>=100) return n.toFixed(2);
+  if(n>=1) return n.toFixed(4);
+  return n.toPrecision(4);
+}
+function chunk(a,s){const o=[];for(let i=0;i<a.length;i+=s)o.push(a.slice(i,i+s));return o;}
+
+// ── Detection — returns {setup, direction, score, reason} or null ──
+function detectBest(closes){
+  if(!closes||closes.length<22) return null;
+  const thresh=parseFloat(document.getElementById('threshSlider').value);
+  const price=closes.at(-1);
+  const m5=sma(closes,5),m10=sma(closes,10),b=bbCalc(closes,20);
+  if(!m5||!m10||!b) return null;
+  const d5=pct(price,m5),d10=pct(price,m10),dMid=pct(price,b.mid);
+  const trend8=(closes.at(-1)-closes.at(-8))/closes.at(-8)*100;
+  const candidates=[];
+
+  // ⭐ GOLDEN RE
+  const inZone=price>=Math.min(m5,m10)&&price<=Math.max(m5,m10);
+  const nearZone=d5<=1.5&&d10<=1.5;
+  if((inZone||nearZone)&&Math.abs(trend8)>=1.5){
+    const gap=pct(m5,m10);
+    candidates.push({setup:'GOLDEN_RE',direction:trend8>=0?'LONG':'SHORT',
+      score:Math.max(30,Math.min(Math.round(90-gap*6+Math.min(Math.abs(trend8)*3,20)),99)),
+      reason:`Zona MA5-MA10·Gap ${gap.toFixed(2)}%·Trend ${trend8.toFixed(1)}%`,
+      price,ma5:m5,ma10:m10,midBB:b.mid,upperBB:b.upper,lowerBB:b.lower,closes});
+  }
+
+  // 🔄 RE KLASIK
+  if(dMid<=3.5){
+    const win=closes.slice(-15,-1),swing=(Math.max(...win)-Math.min(...win))/Math.min(...win)*100;
+    if(swing>=2.0)
+      candidates.push({setup:'RE_KLASIK',direction:closes.at(-3)<closes.at(-10)?'LONG':'SHORT',
+        score:Math.max(20,Math.min(Math.round(swing*5+Math.max(0,30-dMid*4)),99)),
+        reason:`MidBB Δ${dMid.toFixed(2)}%·Swing ${swing.toFixed(1)}%`,
+        price,ma5:m5,ma10:m10,midBB:b.mid,upperBB:b.upper,lowerBB:b.lower,closes});
+  }
+
+  // ↩️ PULLBACK
+  if(d5<=thresh||d10<=thresh){
+    const t9=(closes.at(-2)-closes.at(-9))/closes.at(-9)*100;
+    if(Math.abs(t9)>=1.5){
+      const ret=(price-closes.at(-2))/closes.at(-2)*100;
+      if(Math.sign(ret)!==Math.sign(t9)){
+        const lbl=d5<d10?`MA5 Δ${d5.toFixed(2)}%`:`MA10 Δ${d10.toFixed(2)}%`;
+        candidates.push({setup:'PULLBACK',direction:t9>0?'LONG':'SHORT',
+          score:Math.max(20,Math.min(Math.round(Math.abs(t9)*6+Math.max(0,30-Math.min(d5,d10)*8)),99)),
+          reason:`${lbl}·Trend ${t9.toFixed(1)}%`,
+          price,ma5:m5,ma10:m10,midBB:b.mid,upperBB:b.upper,lowerBB:b.lower,closes});
+      }
+    }
+  }
+
+  // ⚡ EXTREME
+  if(price<=b.upper&&price>=b.lower){
+    let hadA=false,hadB=false;
+    for(let i=closes.length-12;i<closes.length-1;i++){
+      const hb=bbCalc(closes.slice(0,i+1),20);
+      if(!hb) continue;
+      if(closes[i]>hb.upper) hadA=true;
+      if(closes[i]<hb.lower) hadB=true;
+    }
+    if((hadA||hadB)&&!(hadA&&hadB)){
+      const bw=b.upper-b.lower;
+      candidates.push({setup:'EXTREME',direction:hadA?'SHORT':'LONG',
+        score:Math.max(20,Math.min(Math.round((hadA?(b.upper-price)/bw:(price-b.lower)/bw)*70+25),99)),
+        reason:`Return dari ${hadA?'Upper':'Lower'} BB`,
+        price,ma5:m5,ma10:m10,midBB:b.mid,upperBB:b.upper,lowerBB:b.lower,closes});
+    }
+  }
+
+  // 🔹 CSM
+  const moves=closes.slice(-10).map((v,i,a)=>i>0?Math.abs(v-a[i-1]):0).slice(1);
+  const avgM=moves.reduce((s,v)=>s+v,0)/moves.length;
+  if(avgM>0){
+    const ratio=Math.abs(price-closes.at(-2))/avgM;
+    const t10=(closes.at(-2)-closes.at(-10))/closes.at(-10)*100;
+    if(ratio<=0.45&&Math.abs(t10)>=1.5)
+      candidates.push({setup:'CSM',direction:t10>0?'LONG':'SHORT',
+        score:Math.max(20,Math.min(Math.round((1-ratio/0.45)*70+Math.min(Math.abs(t10)*3,30)),99)),
+        reason:`Body ${(ratio*100).toFixed(0)}%avg·Trend ${t10.toFixed(1)}%`,
+        price,ma5:m5,ma10:m10,midBB:b.mid,upperBB:b.upper,lowerBB:b.lower,closes});
+  }
+
+  if(!candidates.length) return null;
+  return candidates.sort((a,b)=>b.score-a.score)[0];
+}
+
+// ── Fetch ──
+async function fetchPairs(){
+  const r=await fetch('https://api.binance.com/api/v3/exchangeInfo');
+  const d=await r.json();
+  return d.symbols.filter(s=>s.quoteAsset==='USDT'&&s.status==='TRADING'&&s.isSpotTradingAllowed).map(s=>s.symbol);
+}
+async function fetchCloses(sym,tf){
+  const r=await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${tf}&limit=80`);
+  const d=await r.json();
+  if(!Array.isArray(d)) return null;
+  return d.map(k=>parseFloat(k[4]));
+}
+
+// ── MTF Confirm Scan ──
+async function startScan(){
+  if(scanning) return;
+  scanning=true; aborted=false; allResults=[];
+  document.getElementById('scanBtn').style.display='none';
+  document.getElementById('stopBtn').style.display='';
+  document.getElementById('progressArea').style.display='';
+  document.getElementById('doneMsg').style.display='none';
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('noResultState').style.display='none';
+  document.getElementById('resultsContainer').innerHTML='';
+  document.getElementById('summaryRow').style.display='none';
+  document.getElementById('logBox').innerHTML='';
+  setProgress(0,'Mengambil daftar pair...');
+
+  let pairs;
+  try{
+    pairs=await fetchPairs();
+    addLog(`📋 ${pairs.length} pair ditemukan`);
+  }catch(e){addLog('❌ Gagal: '+e.message);endScan();return;}
+
+  let done=0;
+  const CONC=8;
+  for(const batch of chunk(pairs,CONC)){
+    if(aborted) break;
+    await Promise.all(batch.map(async sym=>{
+      try{
+        if(scanMode==='CONFIRM'){
+          // Fetch semua 3 TF
+          const [c4h,c1h,c15m]=await Promise.all([
+            fetchCloses(sym,'4h'),
+            fetchCloses(sym,'1h'),
+            fetchCloses(sym,'15m')
+          ]);
+          const det4h=detectBest(c4h);
+          const det1h=detectBest(c1h);
+          const det15m=detectBest(c15m);
+
+          // Konfirmasi: ketiga TF harus ada setup DAN arah sama
+          if(det4h&&det1h&&det15m&&
+             det4h.direction===det1h.direction&&
+             det1h.direction===det15m.direction){
+            // Gunakan data M15 sebagai entry, tapi cantumkan info semua TF
+            const confirmed={
+              ...det15m,
+              sym,
+              confirmed:true,
+              mtf:{
+                '4h':{setup:det4h.setup,direction:det4h.direction,score:det4h.score},
+                '1h':{setup:det1h.setup,direction:det1h.direction,score:det1h.score},
+                '15m':{setup:det15m.setup,direction:det15m.direction,score:det15m.score},
+              },
+              // Average score across all TF
+              score:Math.round((det4h.score+det1h.score+det15m.score)/3),
+              confirmScore:Math.round((det4h.score+det1h.score+det15m.score)/3),
+            };
+            allResults.push(confirmed);
+            addLog(`✅ ${sym}: ${det4h.setup}(H4) ${det1h.setup}(H1) ${det15m.setup}(M15) → ${det15m.direction}`);
+            renderResults();
+          }
+        } else {
+          // Single TF mode
+          const closes=await fetchCloses(sym,singleTF);
+          const det=detectBest(closes);
+          if(det){
+            allResults.push({...det,sym,confirmed:false,mtf:null});
+            addLog(`✅ ${sym}: ${det.setup} ${det.direction}`);
+            renderResults();
+          }
+        }
+      }catch(e){}
+      done++;
+      setProgress(Math.round(done/pairs.length*100),`${done}/${pairs.length} · ${allResults.length} signal`);
+    }));
+  }
+  endScan();
+}
+
+function stopScan(){aborted=true;}
+function endScan(){
+  scanning=false;
+  document.getElementById('scanBtn').style.display='';
+  document.getElementById('stopBtn').style.display='none';
+  const t=allResults.length;
+  document.getElementById('doneMsg').style.display='';
+  document.getElementById('doneMsg').textContent=`✅ Selesai — ${t} signal${scanMode==='CONFIRM'?' terkonfirmasi MTF':''}`;
+  addLog(`🏁 Total: ${t} signal`);
+  renderResults();
+}
+
+// ── Render ──
+function getFiltered(){
+  return allResults.filter(r=>{
+    if(!r||!r.setup||!r.direction) return false;
+    if(activeTab==='GOLDEN'&&r.setup!=='GOLDEN_RE') return false;
+    if(activeTab==='RE'&&r.setup==='GOLDEN_RE') return false;
+    if(dirFilter!=='ALL'&&r.direction!==dirFilter) return false;
+    if(setupFilter!=='ALL'&&r.setup!==setupFilter) return false;
+    return true;
+  }).sort((a,b)=>(b.score||0)-(a.score||0));
+}
+
+function renderResults(){
+  const filtered=getFiltered();
+  const golden=allResults.filter(r=>r.setup==='GOLDEN_RE').length;
+  const re=allResults.filter(r=>r.setup!=='GOLDEN_RE').length;
+  document.getElementById('cntGolden').textContent=golden;
+  document.getElementById('cntRE').textContent=re;
+  const confirmed=allResults.filter(r=>r.confirmed).length;
+
+  if(filtered.length>0){
+    document.getElementById('summaryRow').style.display='flex';
+    document.getElementById('sumTotal').textContent=filtered.length;
+    document.getElementById('sumLong').textContent=filtered.filter(r=>r.direction==='LONG').length;
+    document.getElementById('sumShort').textContent=filtered.filter(r=>r.direction==='SHORT').length;
+    const cb=document.getElementById('sumConfirmBox');
+    cb.style.display=scanMode==='CONFIRM'?'flex':'none';
+    document.getElementById('sumConfirm').textContent=confirmed;
+    document.getElementById('noResultState').style.display='none';
+  } else if(allResults.length>0){
+    document.getElementById('summaryRow').style.display='none';
+    document.getElementById('noResultState').style.display='';
+  }
+
+  document.getElementById('resultsContainer').innerHTML=filtered.map(d=>{
+    const m=META[d.setup]||{label:d.setup,color:'#58a6ff',icon:'●'};
+    const col=d.direction==='LONG'?'#3fb950':'#f85149';
+    const sc=d.score>70?'#3fb950':d.score>45?'#e3b341':'#f85149';
+    const inds=[
+      {l:'MA5',v:d.ma5,c:'#f0b429'},{l:'MA10',v:d.ma10,c:'#9d7cd8'},
+      {l:'MidBB',v:d.midBB,c:'#58a6ff'},{l:'Upper',v:d.upperBB,c:'#f85149'},
+      {l:'Lower',v:d.lowerBB,c:'#3fb950'},
+    ].filter(x=>x.v);
+
+    // MTF badges
+    let mtfHTML='';
+    if(d.confirmed&&d.mtf){
+      mtfHTML=`<div class="mtf-row">
+        <span style="font-size:9px;color:#8b949e;align-self:center">MTF:</span>
+        ${MTF_TFS.map(tf=>{
+          const td=d.mtf[tf]; if(!td) return '';
+          const mm=META[td.setup]||{color:'#58a6ff'};
+          const dc=td.direction==='LONG'?'#3fb95055':'#f8514955';
+          return `<span class="mtf-badge" style="background:${dc};border:1px solid ${td.direction==='LONG'?'#3fb95080':'#f8514980'}">
+            <span style="color:${MTF_LABELS[tf].color};font-size:8px">${MTF_LABELS[tf].label}</span>
+            <span style="color:${mm.color}">${td.setup.replace('_RE','').replace('_KLASIK','K').replace('PULLBACK','PB')}</span>
+            <span style="color:${td.direction==='LONG'?'#3fb950':'#f85149'}">${td.direction==='LONG'?'▲':'▼'}</span>
+          </span>`;
+        }).join('')}
+        <span class="mtf-badge" style="background:#3fb95020;border:1px solid #3fb95060;color:#3fb950;font-weight:800">✅ CONFIRM</span>
+      </div>`;
+    }
+
+    return `<div class="result-card" style="border:1px solid ${d.confirmed?'#3fb95040':m.color+'30'}">
+      <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+        <div style="min-width:140px">
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-size:14px">${m.icon}</span>
+            <span style="font-weight:700;font-size:14px;color:#fff">${d.sym.replace('USDT','/USDT')}</span>
+            ${d.confirmed?'<span style="font-size:9px;background:#3fb95020;color:#3fb950;border:1px solid #3fb95060;padding:1px 5px;border-radius:4px;font-weight:700">MTF✓</span>':''}
+          </div>
+          <div style="font-size:12px;color:#8b949e;margin-top:1px">$${fmt(d.price)}</div>
+          <div style="margin-top:6px;display:flex;gap:3px;flex-wrap:wrap">
+            <span class="tag" style="background:${col};color:#000">${d.direction}</span>
+            <span class="tag" style="background:${m.color}22;color:${m.color};border:1px solid ${m.color}55">${m.label}</span>
+          </div>
+          <div style="margin-top:6px">
+            <div style="display:flex;justify-content:space-between">
+              <span style="font-size:9px;color:#8b949e">Score</span>
+              <span style="font-size:9px;font-weight:700;color:${sc}">${d.score}%</span>
+            </div>
+            <div style="background:#21262d;border-radius:3px;height:3px;margin-top:2px">
+              <div style="width:${d.score}%;height:100%;background:${sc};border-radius:3px"></div>
+            </div>
+          </div>
+          <div style="font-size:9px;color:#6e7681;margin-top:5px;line-height:1.7">${d.reason||''}</div>
+          ${mtfHTML}
+        </div>
+        <div class="ind-grid">
+          ${inds.map(x=>`<div class="ind-item"><div class="ind-label" style="color:${x.c}">${x.l}</div><div class="ind-val">${fmt(x.v)}</div></div>`).join('')}
+        </div>
+        <canvas id="cv-${d.sym}-${d.setup}" width="155" height="50" style="flex-shrink:0;align-self:center"></canvas>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Draw charts
+  filtered.forEach(d=>{
+    const cv=document.getElementById(`cv-${d.sym}-${d.setup}`);
+    if(!cv||!d.closes||d.closes.length<2) return;
+    const ctx=cv.getContext('2d');
+    const sl=d.closes.slice(-22);
+    const mn=Math.min(...sl),mx=Math.max(...sl),rng=mx-mn||1;
+    const W=155,H=50,col=d.direction==='LONG'?'#3fb950':'#f85149';
+    ctx.clearRect(0,0,W,H);
+    const xs=sl.map((v,i)=>[(i/(sl.length-1))*W,H-2-((v-mn)/rng)*(H-5)]);
+    ctx.beginPath();
+    ctx.moveTo(xs[0][0],xs[0][1]);
+    xs.forEach(([x,y])=>ctx.lineTo(x,y));
+    ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();
+    const g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,col+'44');g.addColorStop(1,col+'00');
+    ctx.fillStyle=g;ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(xs[0][0],xs[0][1]);
+    xs.forEach(([x,y])=>ctx.lineTo(x,y));
+    ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.stroke();
+  });
+}
+
+// ── UI helpers ──
+function setProgress(p,msg){
+  document.getElementById('progressFill').style.width=p+'%';
+  document.getElementById('progressPct').textContent=p+'%';
+  if(msg) document.getElementById('statusMsg').textContent=msg;
+}
+function addLog(msg){
+  const box=document.getElementById('logBox');
+  const c=msg.includes('✅')?'#3fb950':msg.includes('❌')?'#f85149':msg.includes('🏁')?'#FFD700':'#8b949e';
+  box.innerHTML+=`<div style="color:${c}">${msg}</div>`;
+  box.scrollTop=box.scrollHeight;
+}
+function setMode(m){
+  scanMode=m;
+  document.getElementById('modeConfirm').className='btn'+(m==='CONFIRM'?' active':'');
+  document.getElementById('modeSingle').className='btn'+(m==='SINGLE'?' active':'');
+  document.getElementById('singleTFGroup').style.display=m==='SINGLE'?'':'none';
+}
+function setTF(t){
+  singleTF=t;
+  document.querySelectorAll('#tfBtns .btn').forEach(b=>{
+    b.className='btn'+(b.textContent.trim().toLowerCase()===t?' active':'');
+  });
+}
+function setDir(d){
+  dirFilter=d;
+  ['All','Long','Short'].forEach(x=>{
+    const el=document.getElementById('dir'+x);
+    if(!el) return;
+    const v=x.toUpperCase();
+    el.className='btn'+(v===d?(' '+(d==='ALL'?'active':d.toLowerCase())):'');
+  });
+  renderResults();
+}
+function setTab(t){
+  activeTab=t; setupFilter='ALL';
+  const gTab=document.getElementById('tabGolden');
+  const rTab=document.getElementById('tabRE');
+  gTab.className='tab'+(t==='GOLDEN'?' active':'');
+  gTab.style.color=t==='GOLDEN'?'#FFD700':'#484f58';
+  gTab.style.borderBottom=t==='GOLDEN'?'2px solid #FFD700':'2px solid #21262d';
+  rTab.className='tab'+(t==='RE'?' active':'');
+  rTab.style.color=t==='RE'?'#e3b341':'#484f58';
+  rTab.style.borderBottom=t==='RE'?'2px solid #e3b341':'2px solid #21262d';
+  document.getElementById('reFilters').style.display=t==='RE'?'flex':'none';
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  const first=document.querySelector('.filter-btn');
+  if(first) first.classList.add('active');
+  renderResults();
+}
+function setSetupFilter(f,el){
+  setupFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderResults();
+}
+</script>
+
+</body>
+</html>

@@ -42,7 +42,7 @@ canvas{display:block;border-radius:4px}
   <span style="background:#FFD70022;color:#FFD700;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;border:1px solid #FFD70050">MTF + EMA50</span>
 </div>
 <p style="margin:0 0 12px 28px;font-size:11px;color:#8b949e">
-  H4·H1·M15 Confirmation · EMA50 Trend Filter ·
+  H4·H1·M15 Confirmation · EMA50 Trend ·
   <span style="color:#FFD700">Golden RE</span> ·
   <span style="color:#e3b341">RE Klasik</span> ·
   <span style="color:#9d7cd8">Pullback</span> ·
@@ -50,12 +50,20 @@ canvas{display:block;border-radius:4px}
   <span style="color:#3dc9b0">CSM</span>
 </p>
 
+<!-- BBMA Rule info -->
+
+<div style="background:#3fb95010;border:1px solid #3fb95040;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:#8b949e;line-height:1.8">
+  <strong style="color:#3fb950">📐 BBMA OMA Rules:</strong>
+  <span style="color:#3fb950">LONG</span> → RE zona <strong style="color:#3fb950">MA5 Low · MA10 Low</strong> &nbsp;|&nbsp;
+  <span style="color:#f85149">SHORT</span> → RE zona <strong style="color:#f85149">MA5 High · MA10 High</strong> &nbsp;·&nbsp;
+  <span style="color:#ff7b54">EMA50 Close</span> = Trend Makro
+</div>
+
 <div style="background:#1f6feb15;border:1px solid #1f6feb40;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:#8b949e;line-height:1.8">
   <strong style="color:#58a6ff">📐 MTF Logic:</strong>
   <span style="color:#f0b429">H4</span> Bias →
   <span style="color:#e3b341">H1</span> Konfirmasi →
   <span style="color:#3dc9b0">M15</span> Entry ·
-  <span style="color:#ff7b54">EMA50</span> filter trend makro ·
   <strong style="color:#3fb950">✅ CONFIRM</strong> hanya jika semua selaras
 </div>
 
@@ -133,23 +141,20 @@ canvas{display:block;border-radius:4px}
     <button class="filter-btn" onclick="setSetupFilter('EXTREME',this)">Extreme</button>
     <button class="filter-btn" onclick="setSetupFilter('CSM',this)">CSM</button>
   </div>
-
   <div id="summaryRow" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:12px">
     <div class="summary-box"><span id="sumTotal" style="font-size:18px;font-weight:700;color:#FFD700">0</span><span style="font-size:10px;color:#8b949e">Total</span></div>
     <div class="summary-box"><span id="sumLong" style="font-size:18px;font-weight:700;color:#3fb950">0</span><span style="font-size:10px;color:#8b949e">Long</span></div>
     <div class="summary-box"><span id="sumShort" style="font-size:18px;font-weight:700;color:#f85149">0</span><span style="font-size:10px;color:#8b949e">Short</span></div>
   </div>
-
   <div id="resultsContainer"></div>
-
   <div id="emptyState" style="text-align:center;padding:50px 20px">
     <div style="font-size:36px;margin-bottom:12px">📐</div>
-    <p style="font-size:14px;font-weight:700;color:#FFD700;margin-bottom:8px">BBMA MTF + EMA50 Scanner</p>
-    <p style="font-size:11px;color:#8b949e;margin-bottom:4px">Signal hanya muncul jika H4·H1·M15 selaras + EMA50 konfirmasi trend</p>
+    <p style="font-size:14px;font-weight:700;color:#FFD700;margin-bottom:8px">BBMA OMA MTF Scanner</p>
+    <p style="font-size:11px;color:#8b949e;margin-bottom:4px">LONG: zona MA5 Low–MA10 Low &nbsp;|&nbsp; SHORT: zona MA5 Hi–MA10 Hi</p>
     <p style="font-size:10px;color:#484f58">Klik ⭐ SCAN untuk mulai</p>
   </div>
   <div id="noResultState" style="display:none;text-align:center;padding:28px;color:#8b949e;font-size:12px">
-    Tidak ada signal terkonfirmasi. Coba naikkan threshold, matikan EMA50 filter, atau gunakan Single TF.
+    Tidak ada signal. Coba naikkan threshold atau matikan EMA50 filter.
   </div>
 </div>
 
@@ -182,7 +187,9 @@ var META = {
 // ── Math ──
 function sma(arr, n) {
   if (!arr || arr.length < n) return null;
-  return arr.slice(-n).reduce(function(s,v){return s+v;}, 0) / n;
+  var sum = 0;
+  for (var i = arr.length - n; i < arr.length; i++) sum += arr[i];
+  return sum / n;
 }
 
 function calcEMA(arr, n) {
@@ -195,19 +202,16 @@ function calcEMA(arr, n) {
   return e;
 }
 
-function ema50Trend(closes) {
-  if (!closes || closes.length < 55) return null;
-  var e50 = calcEMA(closes, 50);
-  if (!e50) return null;
-  return closes[closes.length-1] > e50 ? 'BULL' : 'BEAR';
-}
-
 function bbCalc(arr, n) {
   n = n || 20;
   if (!arr || arr.length < n) return null;
   var sl = arr.slice(-n);
-  var mid = sl.reduce(function(s,v){return s+v;}, 0) / n;
-  var std = Math.sqrt(sl.reduce(function(s,v){return s + (v-mid)*(v-mid);}, 0) / n);
+  var mid = 0;
+  for (var i = 0; i < sl.length; i++) mid += sl[i];
+  mid = mid / n;
+  var variance = 0;
+  for (var i = 0; i < sl.length; i++) variance += (sl[i] - mid) * (sl[i] - mid);
+  var std = Math.sqrt(variance / n);
   return {mid: mid, upper: mid + 2*std, lower: mid - 2*std};
 }
 
@@ -229,22 +233,49 @@ function chunk(arr, size) {
   return out;
 }
 
+// ── Fetch OHLC — returns {closes, highs, lows} ──
+async function fetchOHLC(sym, tf) {
+  var r = await fetch('https://api.binance.com/api/v3/klines?symbol='+sym+'&interval='+tf+'&limit=100');
+  var d = await r.json();
+  if (!Array.isArray(d)) return null;
+  return {
+    closes: d.map(function(k){return parseFloat(k[4]);}),
+    highs:  d.map(function(k){return parseFloat(k[2]);}),
+    lows:   d.map(function(k){return parseFloat(k[3]);})
+  };
+}
+
 // ── Detection ──
-function detectBest(closes) {
-  if (!closes || closes.length < 22) return null;
+// BBMA OMA proper:
+//   LONG  → MA5 Low  (sma of lows,5)  + MA10 Low  (sma of lows,10)
+//   SHORT → MA5 High (sma of highs,5) + MA10 High (sma of highs,10)
+//   MidBB / BB → based on closes
+//   EMA50 → based on closes
+
+function detectBest(ohlc) {
+  if (!ohlc || !ohlc.closes || ohlc.closes.length < 22) return null;
   var thresh = parseFloat(document.getElementById('threshSlider').value);
   var useEMA = document.getElementById('emaFilter').checked;
-  var price = closes[closes.length-1];
-  var m5 = sma(closes, 5);
-  var m10 = sma(closes, 10);
+
+  var closes = ohlc.closes;
+  var highs   = ohlc.highs;
+  var lows    = ohlc.lows;
+  var price   = closes[closes.length - 1];
+
+  // MA based on highs (for SHORT)
+  var ma5hi  = sma(highs, 5);
+  var ma10hi = sma(highs, 10);
+  // MA based on lows (for LONG)
+  var ma5lo  = sma(lows, 5);
+  var ma10lo = sma(lows, 10);
+  // BB based on closes
   var b = bbCalc(closes, 20);
+  // EMA50 based on closes
   var e50 = calcEMA(closes, 50);
-  var e50t = ema50Trend(closes);
-  if (!m5 || !m10 || !b) return null;
-  var d5 = pct(price, m5);
-  var d10 = pct(price, m10);
-  var dMid = pct(price, b.mid);
-  var trend8 = (closes[closes.length-1] - closes[closes.length-8]) / closes[closes.length-8] * 100;
+  var e50t = (closes.length >= 55 && e50) ? (price > e50 ? 'BULL' : 'BEAR') : null;
+
+  if (!ma5hi || !ma10hi || !ma5lo || !ma10lo || !b) return null;
+
   var candidates = [];
 
   function emaOk(dir) {
@@ -252,24 +283,45 @@ function detectBest(closes) {
     return (dir === 'LONG' && e50t === 'BULL') || (dir === 'SHORT' && e50t === 'BEAR');
   }
 
+  // ── LONG detections use MA5 Low / MA10 Low ──
+  // ── SHORT detections use MA5 High / MA10 High ──
+
+  // Trend dari closes
+  var trend8 = (closes[closes.length-1] - closes[closes.length-8]) / closes[closes.length-8] * 100;
+
   // ⭐ GOLDEN RE
-  var inZone = price >= Math.min(m5,m10) && price <= Math.max(m5,m10);
-  var nearZone = d5 <= 1.5 && d10 <= 1.5;
-  if ((inZone || nearZone) && Math.abs(trend8) >= 1.5) {
-    var dir = trend8 >= 0 ? 'LONG' : 'SHORT';
-    if (emaOk(dir)) {
-      var gap = pct(m5, m10);
-      candidates.push({
-        setup:'GOLDEN_RE', direction:dir,
-        score: Math.max(30, Math.min(Math.round(90 - gap*6 + Math.min(Math.abs(trend8)*3, 20)), 99)),
-        reason: 'Zona MA5-MA10 Gap ' + gap.toFixed(2) + '% Trend ' + trend8.toFixed(1) + '%',
-        price:price, ma5:m5, ma10:m10, ema50:e50, e50trend:e50t,
-        midBB:b.mid, upperBB:b.upper, lowerBB:b.lower, closes:closes
-      });
-    }
+  // LONG: price di zona antara MA5Lo dan MA10Lo
+  // SHORT: price di zona antara MA5Hi dan MA10Hi
+  var inZoneLong  = price >= Math.min(ma5lo, ma10lo) && price <= Math.max(ma5lo, ma10lo);
+  var nearZoneLong = pct(price, ma5lo) <= 1.5 && pct(price, ma10lo) <= 1.5;
+  var inZoneShort  = price >= Math.min(ma5hi, ma10hi) && price <= Math.max(ma5hi, ma10hi);
+  var nearZoneShort = pct(price, ma5hi) <= 1.5 && pct(price, ma10hi) <= 1.5;
+
+  if ((inZoneLong || nearZoneLong) && trend8 >= 1.5 && emaOk('LONG')) {
+    var gap = pct(ma5lo, ma10lo);
+    candidates.push({
+      setup:'GOLDEN_RE', direction:'LONG',
+      score: Math.max(30, Math.min(Math.round(90 - gap*6 + Math.min(trend8*3, 20)), 99)),
+      reason: 'Price di zona MA5Lo-MA10Lo Gap ' + gap.toFixed(2) + '% Trend +' + trend8.toFixed(1) + '%',
+      price:price, ma5:ma5lo, ma10:ma10lo, ema50:e50, e50trend:e50t,
+      midBB:b.mid, upperBB:b.upper, lowerBB:b.lower, closes:closes,
+      maLabel:'MA5Lo/MA10Lo'
+    });
+  }
+  if ((inZoneShort || nearZoneShort) && trend8 <= -1.5 && emaOk('SHORT')) {
+    var gap = pct(ma5hi, ma10hi);
+    candidates.push({
+      setup:'GOLDEN_RE', direction:'SHORT',
+      score: Math.max(30, Math.min(Math.round(90 - gap*6 + Math.min(Math.abs(trend8)*3, 20)), 99)),
+      reason: 'Price di zona MA5Hi-MA10Hi Gap ' + gap.toFixed(2) + '% Trend ' + trend8.toFixed(1) + '%',
+      price:price, ma5:ma5hi, ma10:ma10hi, ema50:e50, e50trend:e50t,
+      midBB:b.mid, upperBB:b.upper, lowerBB:b.lower, closes:closes,
+      maLabel:'MA5Hi/MA10Hi'
+    });
   }
 
-  // 🔄 RE KLASIK
+  // 🔄 RE KLASIK — price dekat MidBB setelah swing
+  var dMid = pct(price, b.mid);
   if (dMid <= 3.5) {
     var win = closes.slice(-15, -1);
     var wMax = Math.max.apply(null, win);
@@ -277,40 +329,58 @@ function detectBest(closes) {
     var swing = (wMax - wMin) / wMin * 100;
     if (swing >= 2.0) {
       var dir = closes[closes.length-3] < closes[closes.length-10] ? 'LONG' : 'SHORT';
+      var maV = dir === 'LONG' ? ma5lo : ma5hi;
+      var ma10V = dir === 'LONG' ? ma10lo : ma10hi;
       if (emaOk(dir)) {
         candidates.push({
           setup:'RE_KLASIK', direction:dir,
           score: Math.max(20, Math.min(Math.round(swing*5 + Math.max(0, 30-dMid*4)), 99)),
           reason: 'MidBB ' + dMid.toFixed(2) + '% Swing ' + swing.toFixed(1) + '%',
-          price:price, ma5:m5, ma10:m10, ema50:e50, e50trend:e50t,
-          midBB:b.mid, upperBB:b.upper, lowerBB:b.lower, closes:closes
+          price:price, ma5:maV, ma10:ma10V, ema50:e50, e50trend:e50t,
+          midBB:b.mid, upperBB:b.upper, lowerBB:b.lower, closes:closes,
+          maLabel: dir==='LONG' ? 'MA5Lo/MA10Lo' : 'MA5Hi/MA10Hi'
         });
       }
     }
   }
 
   // ↩️ PULLBACK
-  if (d5 <= thresh || d10 <= thresh) {
-    var t9 = (closes[closes.length-2] - closes[closes.length-9]) / closes[closes.length-9] * 100;
-    if (Math.abs(t9) >= 1.5) {
-      var ret = (price - closes[closes.length-2]) / closes[closes.length-2] * 100;
-      if ((ret > 0) !== (t9 > 0)) {
-        var dir = t9 > 0 ? 'LONG' : 'SHORT';
-        if (emaOk(dir)) {
-          var lbl = d5 < d10 ? 'MA5 ' + d5.toFixed(2) + '%' : 'MA10 ' + d10.toFixed(2) + '%';
-          candidates.push({
-            setup:'PULLBACK', direction:dir,
-            score: Math.max(20, Math.min(Math.round(Math.abs(t9)*6 + Math.max(0, 30 - Math.min(d5,d10)*8)), 99)),
-            reason: lbl + ' Trend ' + t9.toFixed(1) + '%',
-            price:price, ma5:m5, ma10:m10, ema50:e50, e50trend:e50t,
-            midBB:b.mid, upperBB:b.upper, lowerBB:b.lower, closes:closes
-          });
-        }
+  // LONG: price pullback ke MA5Lo atau MA10Lo
+  // SHORT: price pullback ke MA5Hi atau MA10Hi
+  var d5lo = pct(price, ma5lo), d10lo = pct(price, ma10lo);
+  var d5hi = pct(price, ma5hi), d10hi = pct(price, ma10hi);
+  var t9 = (closes[closes.length-2] - closes[closes.length-9]) / closes[closes.length-9] * 100;
+
+  if (Math.abs(t9) >= 1.5) {
+    var ret = (price - closes[closes.length-2]) / closes[closes.length-2] * 100;
+    var retOpposite = (ret > 0) !== (t9 > 0);
+    if (retOpposite) {
+      if (t9 > 0 && (d5lo <= thresh || d10lo <= thresh) && emaOk('LONG')) {
+        var lbl = d5lo < d10lo ? 'MA5Lo ' + d5lo.toFixed(2) + '%' : 'MA10Lo ' + d10lo.toFixed(2) + '%';
+        candidates.push({
+          setup:'PULLBACK', direction:'LONG',
+          score: Math.max(20, Math.min(Math.round(t9*6 + Math.max(0, 30-Math.min(d5lo,d10lo)*8)), 99)),
+          reason: lbl + ' Trend +' + t9.toFixed(1) + '%',
+          price:price, ma5:ma5lo, ma10:ma10lo, ema50:e50, e50trend:e50t,
+          midBB:b.mid, upperBB:b.upper, lowerBB:b.lower, closes:closes,
+          maLabel:'MA5Lo/MA10Lo'
+        });
+      }
+      if (t9 < 0 && (d5hi <= thresh || d10hi <= thresh) && emaOk('SHORT')) {
+        var lbl = d5hi < d10hi ? 'MA5Hi ' + d5hi.toFixed(2) + '%' : 'MA10Hi ' + d10hi.toFixed(2) + '%';
+        candidates.push({
+          setup:'PULLBACK', direction:'SHORT',
+          score: Math.max(20, Math.min(Math.round(Math.abs(t9)*6 + Math.max(0, 30-Math.min(d5hi,d10hi)*8)), 99)),
+          reason: lbl + ' Trend ' + t9.toFixed(1) + '%',
+          price:price, ma5:ma5hi, ma10:ma10hi, ema50:e50, e50trend:e50t,
+          midBB:b.mid, upperBB:b.upper, lowerBB:b.lower, closes:closes,
+          maLabel:'MA5Hi/MA10Hi'
+        });
       }
     }
   }
 
-  // ⚡ EXTREME
+  // ⚡ EXTREME — BB break & return (pakai closes)
   if (price <= b.upper && price >= b.lower) {
     var hadA = false, hadB = false;
     for (var i = closes.length-12; i < closes.length-1; i++) {
@@ -321,6 +391,8 @@ function detectBest(closes) {
     }
     if ((hadA || hadB) && !(hadA && hadB)) {
       var dir = hadA ? 'SHORT' : 'LONG';
+      var maV  = dir === 'LONG' ? ma5lo : ma5hi;
+      var ma10V = dir === 'LONG' ? ma10lo : ma10hi;
       if (emaOk(dir)) {
         var bw = b.upper - b.lower;
         var dist = hadA ? (b.upper - price)/bw : (price - b.lower)/bw;
@@ -328,8 +400,9 @@ function detectBest(closes) {
           setup:'EXTREME', direction:dir,
           score: Math.max(20, Math.min(Math.round(dist*70 + 25), 99)),
           reason: 'Return dari ' + (hadA ? 'Upper' : 'Lower') + ' BB',
-          price:price, ma5:m5, ma10:m10, ema50:e50, e50trend:e50t,
-          midBB:b.mid, upperBB:b.upper, lowerBB:b.lower, closes:closes
+          price:price, ma5:maV, ma10:ma10V, ema50:e50, e50trend:e50t,
+          midBB:b.mid, upperBB:b.upper, lowerBB:b.lower, closes:closes,
+          maLabel: dir==='LONG' ? 'MA5Lo/MA10Lo' : 'MA5Hi/MA10Hi'
         });
       }
     }
@@ -340,19 +413,24 @@ function detectBest(closes) {
   for (var i = closes.length-10; i < closes.length-1; i++) {
     moves.push(Math.abs(closes[i] - closes[i-1]));
   }
-  var avgM = moves.reduce(function(s,v){return s+v;}, 0) / moves.length;
+  var avgM = 0;
+  for (var i = 0; i < moves.length; i++) avgM += moves[i];
+  avgM = avgM / moves.length;
   if (avgM > 0) {
     var ratio = Math.abs(price - closes[closes.length-2]) / avgM;
     var t10 = (closes[closes.length-2] - closes[closes.length-10]) / closes[closes.length-10] * 100;
     if (ratio <= 0.45 && Math.abs(t10) >= 1.5) {
       var dir = t10 > 0 ? 'LONG' : 'SHORT';
+      var maV  = dir === 'LONG' ? ma5lo : ma5hi;
+      var ma10V = dir === 'LONG' ? ma10lo : ma10hi;
       if (emaOk(dir)) {
         candidates.push({
           setup:'CSM', direction:dir,
-          score: Math.max(20, Math.min(Math.round((1 - ratio/0.45)*70 + Math.min(Math.abs(t10)*3, 30)), 99)),
+          score: Math.max(20, Math.min(Math.round((1-ratio/0.45)*70 + Math.min(Math.abs(t10)*3, 30)), 99)),
           reason: 'Body ' + Math.round(ratio*100) + '% avg Trend ' + t10.toFixed(1) + '%',
-          price:price, ma5:m5, ma10:m10, ema50:e50, e50trend:e50t,
-          midBB:b.mid, upperBB:b.upper, lowerBB:b.lower, closes:closes
+          price:price, ma5:maV, ma10:ma10V, ema50:e50, e50trend:e50t,
+          midBB:b.mid, upperBB:b.upper, lowerBB:b.lower, closes:closes,
+          maLabel: dir==='LONG' ? 'MA5Lo/MA10Lo' : 'MA5Hi/MA10Hi'
         });
       }
     }
@@ -363,20 +441,13 @@ function detectBest(closes) {
   return candidates[0];
 }
 
-// ── Fetch ──
+// ── Fetch pairs ──
 async function fetchPairs() {
   var r = await fetch('https://api.binance.com/api/v3/exchangeInfo');
   var d = await r.json();
   return d.symbols
     .filter(function(s){return s.quoteAsset==='USDT' && s.status==='TRADING' && s.isSpotTradingAllowed;})
     .map(function(s){return s.symbol;});
-}
-
-async function fetchCloses(sym, tf) {
-  var r = await fetch('https://api.binance.com/api/v3/klines?symbol='+sym+'&interval='+tf+'&limit=100');
-  var d = await r.json();
-  if (!Array.isArray(d)) return null;
-  return d.map(function(k){return parseFloat(k[4]);});
 }
 
 // ── Scan ──
@@ -404,7 +475,7 @@ async function startScan() {
   }
 
   var done = 0;
-  var CONC = 8;
+  var CONC = 6;
   var batches = chunk(pairs, CONC);
 
   for (var bi = 0; bi < batches.length; bi++) {
@@ -414,37 +485,42 @@ async function startScan() {
       try {
         if (scanMode === 'CONFIRM') {
           var results = await Promise.all([
-            fetchCloses(sym, '4h'),
-            fetchCloses(sym, '1h'),
-            fetchCloses(sym, '15m')
+            fetchOHLC(sym, '4h'),
+            fetchOHLC(sym, '1h'),
+            fetchOHLC(sym, '15m')
           ]);
-          var c4h = results[0], c1h = results[1], c15m = results[2];
-          var d4h = detectBest(c4h);
-          var d1h = detectBest(c1h);
-          var d15m = detectBest(c15m);
+          var o4h = results[0], o1h = results[1], o15m = results[2];
+          var d4h = detectBest(o4h);
+          var d1h = detectBest(o1h);
+          var d15m = detectBest(o15m);
           if (d4h && d1h && d15m &&
               d4h.direction === d1h.direction &&
               d1h.direction === d15m.direction) {
-            var confirmed = Object.assign({}, d15m, {
-              sym: sym,
-              confirmed: true,
+            var confirmed = {
+              sym: sym, confirmed: true,
+              setup: d15m.setup, direction: d15m.direction,
+              score: Math.round((d4h.score + d1h.score + d15m.score) / 3),
+              reason: d15m.reason, maLabel: d15m.maLabel,
+              price: d15m.price, ma5: d15m.ma5, ma10: d15m.ma10,
+              ema50: d15m.ema50, e50trend: d15m.e50trend,
+              midBB: d15m.midBB, upperBB: d15m.upperBB, lowerBB: d15m.lowerBB,
+              closes: d15m.closes,
               mtf: {
-                '4h': {setup:d4h.setup, direction:d4h.direction, score:d4h.score},
-                '1h': {setup:d1h.setup, direction:d1h.direction, score:d1h.score},
-                '15m':{setup:d15m.setup,direction:d15m.direction,score:d15m.score}
-              },
-              score: Math.round((d4h.score + d1h.score + d15m.score) / 3)
-            });
+                '4h': {setup:d4h.setup, direction:d4h.direction, score:d4h.score, maLabel:d4h.maLabel},
+                '1h': {setup:d1h.setup, direction:d1h.direction, score:d1h.score, maLabel:d1h.maLabel},
+                '15m':{setup:d15m.setup,direction:d15m.direction,score:d15m.score,maLabel:d15m.maLabel}
+              }
+            };
             allResults.push(confirmed);
-            addLog('✅ ' + sym + ': ' + d4h.setup + '(H4) ' + d1h.setup + '(H1) ' + d15m.setup + '(M15) → ' + d15m.direction);
+            addLog('✅ ' + sym + ' ' + d15m.direction + ': ' + d4h.setup+'(H4) ' + d1h.setup+'(H1) ' + d15m.setup+'(M15)');
             renderResults();
           }
         } else {
-          var closes = await fetchCloses(sym, singleTF);
-          var det = detectBest(closes);
+          var ohlc = await fetchOHLC(sym, singleTF);
+          var det = detectBest(ohlc);
           if (det) {
-            var r = Object.assign({}, det, {sym: sym, confirmed: false, mtf: null});
-            allResults.push(r);
+            det.sym = sym; det.confirmed = false; det.mtf = null;
+            allResults.push(det);
             addLog('✅ ' + sym + ': ' + det.setup + ' ' + det.direction);
             renderResults();
           }
@@ -466,7 +542,7 @@ function endScan() {
   var t = allResults.length;
   document.getElementById('doneMsg').style.display = '';
   document.getElementById('doneMsg').textContent = '✅ Selesai — ' + t + ' signal' + (scanMode==='CONFIRM' ? ' MTF terkonfirmasi' : '');
-  addLog('🏁 Total: ' + t + ' signal');
+  addLog('🏁 Total: ' + t);
   renderResults();
 }
 
@@ -484,15 +560,13 @@ function getFiltered() {
 
 function renderResults() {
   var filtered = getFiltered();
-  var golden = allResults.filter(function(r){return r.setup==='GOLDEN_RE';}).length;
-  var re = allResults.filter(function(r){return r.setup!=='GOLDEN_RE';}).length;
-  document.getElementById('cntGolden').textContent = golden;
-  document.getElementById('cntRE').textContent = re;
+  document.getElementById('cntGolden').textContent = allResults.filter(function(r){return r.setup==='GOLDEN_RE';}).length;
+  document.getElementById('cntRE').textContent = allResults.filter(function(r){return r.setup!=='GOLDEN_RE';}).length;
 
   if (filtered.length > 0) {
     document.getElementById('summaryRow').style.display = 'flex';
     document.getElementById('sumTotal').textContent = filtered.length;
-    document.getElementById('sumLong').textContent = filtered.filter(function(r){return r.direction==='LONG';}).length;
+    document.getElementById('sumLong').textContent  = filtered.filter(function(r){return r.direction==='LONG';}).length;
     document.getElementById('sumShort').textContent = filtered.filter(function(r){return r.direction==='SHORT';}).length;
     document.getElementById('noResultState').style.display = 'none';
   } else if (allResults.length > 0) {
@@ -506,15 +580,17 @@ function renderResults() {
     var m = META[d.setup] || {label:d.setup, color:'#58a6ff', icon:'●'};
     var col = d.direction === 'LONG' ? '#3fb950' : '#f85149';
     var sc = d.score > 70 ? '#3fb950' : d.score > 45 ? '#e3b341' : '#f85149';
+    var maColor = d.direction === 'LONG' ? '#3fb950' : '#f85149';
+    var maLabel5 = d.direction === 'LONG' ? 'MA5Lo' : 'MA5Hi';
+    var maLabel10 = d.direction === 'LONG' ? 'MA10Lo' : 'MA10Hi';
 
-    // Indicators
     var inds = [
-      {l:'MA5',   v:d.ma5,    c:'#f0b429'},
-      {l:'MA10',  v:d.ma10,   c:'#9d7cd8'},
-      {l:'EMA50', v:d.ema50,  c:'#ff7b54'},
-      {l:'MidBB', v:d.midBB,  c:'#58a6ff'},
-      {l:'Upper', v:d.upperBB,c:'#f85149'},
-      {l:'Lower', v:d.lowerBB,c:'#3fb950'}
+      {l:maLabel5,  v:d.ma5,    c:maColor},
+      {l:maLabel10, v:d.ma10,   c:maColor},
+      {l:'EMA50',   v:d.ema50,  c:'#ff7b54'},
+      {l:'MidBB',   v:d.midBB,  c:'#58a6ff'},
+      {l:'Upper',   v:d.upperBB,c:'#f85149'},
+      {l:'Lower',   v:d.lowerBB,c:'#3fb950'}
     ].filter(function(x){return x.v;});
 
     var indHTML = inds.map(function(x){
@@ -532,49 +608,51 @@ function renderResults() {
         var mm = META[td.setup] || {color:'#58a6ff'};
         var dc = td.direction==='LONG' ? '#3fb95030' : '#f8514930';
         var bc = td.direction==='LONG' ? '#3fb95060' : '#f8514960';
-        var shortName = td.setup.replace('GOLDEN_RE','GRE').replace('RE_KLASIK','REK').replace('PULLBACK','PB').replace('EXTREME','EXT');
+        var sn = td.setup.replace('GOLDEN_RE','GRE').replace('RE_KLASIK','REK').replace('PULLBACK','PB').replace('EXTREME','EXT');
         badges += '<span class="mtf-badge" style="background:'+dc+';border:1px solid '+bc+'">'
           + '<span style="color:'+MTF_LABELS[tf].color+';font-size:8px">'+MTF_LABELS[tf].label+'</span>'
-          + '<span style="color:'+mm.color+'">'+shortName+'</span>'
+          + '<span style="color:'+mm.color+'">'+sn+'</span>'
           + '<span style="color:'+(td.direction==='LONG'?'#3fb950':'#f85149')+'">'+(td.direction==='LONG'?'▲':'▼')+'</span>'
           + '</span>';
       }
-      var emaColor = d.e50trend === 'BULL' ? '#3fb950' : '#f85149';
-      var emaBg = d.e50trend === 'BULL' ? '#3fb95020' : '#f8514920';
-      var emaBorder = d.e50trend === 'BULL' ? '#3fb95060' : '#f8514960';
+      var ec = d.e50trend==='BULL' ? '#3fb950' : '#f85149';
+      var eb = d.e50trend==='BULL' ? '#3fb95020' : '#f8514920';
+      var ebb = d.e50trend==='BULL' ? '#3fb95060' : '#f8514960';
       var emaBadge = d.e50trend
-        ? '<span class="mtf-badge" style="background:'+emaBg+';border:1px solid '+emaBorder+'">'
+        ? '<span class="mtf-badge" style="background:'+eb+';border:1px solid '+ebb+'">'
           + '<span style="color:#ff7b54;font-size:8px">EMA50</span>'
-          + '<span style="color:'+emaColor+'">'+(d.e50trend==='BULL'?'▲BULL':'▼BEAR')+'</span>'
-          + '</span>'
+          + '<span style="color:'+ec+'">'+(d.e50trend==='BULL'?'▲BULL':'▼BEAR')+'</span></span>'
         : '';
       mtfHTML = '<div class="mtf-row"><span style="font-size:9px;color:#8b949e">MTF:</span>'
         + badges + emaBadge
         + '<span class="mtf-badge" style="background:#3fb95020;border:1px solid #3fb95060;color:#3fb950;font-weight:800">✅ CONFIRM</span>'
         + '</div>';
     } else if (d.e50trend) {
-      var emaColor = d.e50trend === 'BULL' ? '#3fb950' : '#f85149';
-      var emaBg = d.e50trend === 'BULL' ? '#3fb95020' : '#f8514920';
-      var emaBorder = d.e50trend === 'BULL' ? '#3fb95060' : '#f8514960';
+      var ec = d.e50trend==='BULL' ? '#3fb950' : '#f85149';
+      var eb = d.e50trend==='BULL' ? '#3fb95020' : '#f8514920';
+      var ebb = d.e50trend==='BULL' ? '#3fb95060' : '#f8514960';
       mtfHTML = '<div class="mtf-row">'
-        + '<span class="mtf-badge" style="background:'+emaBg+';border:1px solid '+emaBorder+'">'
+        + '<span class="mtf-badge" style="background:'+eb+';border:1px solid '+ebb+'">'
         + '<span style="color:#ff7b54;font-size:8px">EMA50</span>'
-        + '<span style="color:'+emaColor+'">'+(d.e50trend==='BULL'?'▲ BULL':'▼ BEAR')+'</span>'
+        + '<span style="color:'+ec+'">'+(d.e50trend==='BULL'?'▲ BULL':'▼ BEAR')+'</span>'
         + '</span></div>';
     }
 
-    var cardBorder = d.confirmed ? '#3fb95040' : m.color + '30';
     var confirmedBadge = d.confirmed
       ? '<span style="font-size:9px;background:#3fb95020;color:#3fb950;border:1px solid #3fb95060;padding:1px 5px;border-radius:4px;font-weight:700">MTF✓</span>'
       : '';
 
-    html += '<div class="result-card" style="border:1px solid '+cardBorder+'">'
+    // MA label badge
+    var maTypeBadge = '<span style="font-size:9px;background:'+col+'20;color:'+col+';border:1px solid '+col+'40;padding:1px 5px;border-radius:4px;font-weight:600">'
+      + (d.direction==='LONG' ? 'Lo Zone' : 'Hi Zone') + '</span>';
+
+    html += '<div class="result-card" style="border:1px solid '+(d.confirmed?'#3fb95040':m.color+'30')+'">'
       + '<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">'
       + '<div style="min-width:140px">'
-      + '<div style="display:flex;align-items:center;gap:5px">'
+      + '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'
       + '<span style="font-size:14px">'+m.icon+'</span>'
       + '<span style="font-weight:700;font-size:14px;color:#fff">'+d.sym.replace('USDT','/USDT')+'</span>'
-      + confirmedBadge
+      + confirmedBadge + maTypeBadge
       + '</div>'
       + '<div style="font-size:12px;color:#8b949e;margin-top:1px">$'+fmt(d.price)+'</div>'
       + '<div style="margin-top:6px;display:flex;gap:3px;flex-wrap:wrap">'
@@ -593,16 +671,16 @@ function renderResults() {
       + mtfHTML
       + '</div>'
       + '<div class="ind-grid">'+indHTML+'</div>'
-      + '<canvas id="cv-'+d.sym+'-'+d.setup+'-'+i+'" width="155" height="50" style="flex-shrink:0;align-self:center"></canvas>'
+      + '<canvas id="cv-'+i+'" width="155" height="50" style="flex-shrink:0;align-self:center"></canvas>'
       + '</div></div>';
   }
 
   document.getElementById('resultsContainer').innerHTML = html;
 
-  // Draw mini charts
+  // Charts
   for (var i = 0; i < filtered.length; i++) {
     (function(d, idx) {
-      var cv = document.getElementById('cv-'+d.sym+'-'+d.setup+'-'+idx);
+      var cv = document.getElementById('cv-'+idx);
       if (!cv || !d.closes || d.closes.length < 2) return;
       var ctx = cv.getContext('2d');
       var sl = d.closes.slice(-22);
@@ -612,9 +690,10 @@ function renderResults() {
       var W = 155, H = 50;
       var col = d.direction === 'LONG' ? '#3fb950' : '#f85149';
       ctx.clearRect(0, 0, W, H);
-      var pts = sl.map(function(v, j) {
-        return [j/(sl.length-1)*W, H-2-((v-mn)/rng)*(H-5)];
-      });
+      var pts = [];
+      for (var k = 0; k < sl.length; k++) {
+        pts.push([k/(sl.length-1)*W, H-2-((sl[k]-mn)/rng)*(H-5)]);
+      }
       ctx.beginPath();
       ctx.moveTo(pts[0][0], pts[0][1]);
       for (var k = 1; k < pts.length; k++) ctx.lineTo(pts[k][0], pts[k][1]);
@@ -630,7 +709,7 @@ function renderResults() {
   }
 }
 
-// ── UI ──
+// ── UI Helpers ──
 function setProgress(p, msg) {
   document.getElementById('progressFill').style.width = p + '%';
   document.getElementById('progressPct').textContent = p + '%';
@@ -638,47 +717,46 @@ function setProgress(p, msg) {
 }
 function addLog(msg) {
   var box = document.getElementById('logBox');
-  var c = msg.indexOf('✅') >= 0 ? '#3fb950' : msg.indexOf('❌') >= 0 ? '#f85149' : msg.indexOf('🏁') >= 0 ? '#FFD700' : '#8b949e';
+  var c = msg.indexOf('✅')>=0?'#3fb950':msg.indexOf('❌')>=0?'#f85149':msg.indexOf('🏁')>=0?'#FFD700':'#8b949e';
   box.innerHTML += '<div style="color:'+c+'">'+msg+'</div>';
   box.scrollTop = box.scrollHeight;
 }
 function toggleEMABadge(el) {
-  var badge = document.getElementById('emaFilterBadge');
-  badge.textContent = el.checked ? 'ON' : 'OFF';
-  badge.style.color = el.checked ? '#ff7b54' : '#484f58';
-  badge.style.borderColor = el.checked ? '#ff7b5450' : '#30363d';
-  badge.style.background = el.checked ? '#ff7b5422' : 'transparent';
+  var b = document.getElementById('emaFilterBadge');
+  b.textContent = el.checked ? 'ON' : 'OFF';
+  b.style.color = el.checked ? '#ff7b54' : '#484f58';
+  b.style.borderColor = el.checked ? '#ff7b5450' : '#30363d';
+  b.style.background = el.checked ? '#ff7b5422' : 'transparent';
 }
 function setMode(m) {
   scanMode = m;
-  document.getElementById('modeConfirm').className = 'btn' + (m==='CONFIRM' ? ' active' : '');
-  document.getElementById('modeSingle').className = 'btn' + (m==='SINGLE' ? ' active' : '');
+  document.getElementById('modeConfirm').className = 'btn'+(m==='CONFIRM'?' active':'');
+  document.getElementById('modeSingle').className  = 'btn'+(m==='SINGLE'?' active':'');
   document.getElementById('singleTFGroup').style.display = m==='SINGLE' ? '' : 'none';
 }
 function setTF(t) {
   singleTF = t;
   var btns = document.querySelectorAll('#tfBtns .btn');
-  for (var i = 0; i < btns.length; i++) {
-    btns[i].className = 'btn' + (btns[i].textContent.trim().toLowerCase() === t ? ' active' : '');
-  }
+  for (var i = 0; i < btns.length; i++)
+    btns[i].className = 'btn'+(btns[i].textContent.trim().toLowerCase()===t?' active':'');
 }
 function setDir(d) {
   dirFilter = d;
-  document.getElementById('dirAll').className   = 'btn' + (d==='ALL'   ? ' active' : '');
-  document.getElementById('dirLong').className  = 'btn' + (d==='LONG'  ? ' active' : '');
-  document.getElementById('dirShort').className = 'btn' + (d==='SHORT' ? ' active' : '');
+  document.getElementById('dirAll').className   = 'btn'+(d==='ALL'  ?' active':'');
+  document.getElementById('dirLong').className  = 'btn'+(d==='LONG' ?' active':'');
+  document.getElementById('dirShort').className = 'btn'+(d==='SHORT'?' active':'');
   renderResults();
 }
 function setTab(t) {
   activeTab = t; setupFilter = 'ALL';
-  var gTab = document.getElementById('tabGolden');
-  var rTab = document.getElementById('tabRE');
-  gTab.className = 'tab' + (t==='GOLDEN' ? ' active' : '');
-  gTab.style.color = t==='GOLDEN' ? '#FFD700' : '#484f58';
-  gTab.style.borderBottom = t==='GOLDEN' ? '2px solid #FFD700' : '2px solid #21262d';
-  rTab.className = 'tab' + (t==='RE' ? ' active' : '');
-  rTab.style.color = t==='RE' ? '#e3b341' : '#484f58';
-  rTab.style.borderBottom = t==='RE' ? '2px solid #e3b341' : '2px solid #21262d';
+  var g = document.getElementById('tabGolden');
+  var r = document.getElementById('tabRE');
+  g.className = 'tab'+(t==='GOLDEN'?' active':'');
+  g.style.color = t==='GOLDEN' ? '#FFD700' : '#484f58';
+  g.style.borderBottom = t==='GOLDEN' ? '2px solid #FFD700' : '2px solid #21262d';
+  r.className = 'tab'+(t==='RE'?' active':'');
+  r.style.color = t==='RE' ? '#e3b341' : '#484f58';
+  r.style.borderBottom = t==='RE' ? '2px solid #e3b341' : '2px solid #21262d';
   document.getElementById('reFilters').style.display = t==='RE' ? 'flex' : 'none';
   var fbtns = document.querySelectorAll('.filter-btn');
   for (var i = 0; i < fbtns.length; i++) fbtns[i].classList.remove('active');

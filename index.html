@@ -131,6 +131,9 @@ canvas{display:block;border-radius:4px}
   <button class="tab" id="tabRE" onclick="setTab('RE')">
     🔁 Re-Entry <span id="cntRE" style="background:#21262d;color:#e3b341;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px">0</span>
   </button>
+  <button class="tab" id="tabCross" onclick="setTab('CROSS')">
+    ✂️ EMA×BB <span id="cntCross" style="background:#21262d;color:#c084fc;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px">0</span>
+  </button>
 </div>
 
 <div class="panel">
@@ -140,6 +143,13 @@ canvas{display:block;border-radius:4px}
     <button class="filter-btn" onclick="setSetupFilter('PULLBACK',this)">Pullback</button>
     <button class="filter-btn" onclick="setSetupFilter('EXTREME',this)">Extreme</button>
     <button class="filter-btn" onclick="setSetupFilter('CSM',this)">CSM</button>
+  </div>
+  <div id="crossFilters" style="display:none;flex-wrap:wrap;gap:4px;margin-bottom:12px">
+    <button class="filter-btn active" onclick="setSetupFilter('ALL',this)">Semua Cross</button>
+    <button class="filter-btn" onclick="setSetupFilter('EMA_X_MID',this)"  style="color:#c084fc;border-color:#c084fc50">✂️ EMA×MidBB</button>
+    <button class="filter-btn" onclick="setSetupFilter('EMA_X_UPPER',this)" style="color:#f87171;border-color:#f8717150">🔺 EMA×UpperBB</button>
+    <button class="filter-btn" onclick="setSetupFilter('EMA_X_LOWER',this)" style="color:#34d399;border-color:#34d39950">🔻 EMA×LowerBB</button>
+    <button class="filter-btn" onclick="setSetupFilter('EMA_X_ALL',this)"   style="color:#fff700;border-color:#fff70050">💥 EMA×BB Full</button>
   </div>
   <div id="summaryRow" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:12px">
     <div class="summary-box"><span id="sumTotal" style="font-size:18px;font-weight:700;color:#FFD700">0</span><span style="font-size:10px;color:#8b949e">Total</span></div>
@@ -177,11 +187,15 @@ var MTF_LABELS = {
   '15m':{label:'M15',color:'#3dc9b0'}
 };
 var META = {
-  GOLDEN_RE:{label:'Golden RE',color:'#FFD700',icon:'⭐'},
-  RE_KLASIK: {label:'RE Klasik',color:'#e3b341',icon:'🔄'},
-  PULLBACK:  {label:'Pullback', color:'#9d7cd8',icon:'↩️'},
-  EXTREME:   {label:'Extreme', color:'#f0b429',icon:'⚡'},
-  CSM:       {label:'CSM',     color:'#3dc9b0',icon:'🔹'}
+  GOLDEN_RE:    {label:'Golden RE',    color:'#FFD700',icon:'⭐'},
+  RE_KLASIK:    {label:'RE Klasik',    color:'#e3b341',icon:'🔄'},
+  PULLBACK:     {label:'Pullback',     color:'#9d7cd8',icon:'↩️'},
+  EXTREME:      {label:'Extreme',      color:'#f0b429',icon:'⚡'},
+  CSM:          {label:'CSM',          color:'#3dc9b0',icon:'🔹'},
+  EMA_X_MID:    {label:'EMA×MidBB',   color:'#c084fc',icon:'✂️'},
+  EMA_X_UPPER:  {label:'EMA×UpperBB', color:'#f87171',icon:'🔺'},
+  EMA_X_LOWER:  {label:'EMA×LowerBB', color:'#34d399',icon:'🔻'},
+  EMA_X_ALL:    {label:'EMA×BB Full', color:'#fff700',icon:'💥'},
 };
 
 // ── Math ──
@@ -441,7 +455,129 @@ function detectBest(ohlc) {
   return candidates[0];
 }
 
-// ── Fetch pairs ──
+// ── EMA50 Crossing Detection ──
+// Deteksi crossing EMA50 dengan Upper/Mid/Lower BB
+// Menggunakan 2 candle terakhir untuk deteksi perpotongan
+function detectEMACross(ohlc) {
+  if (!ohlc || !ohlc.closes || ohlc.closes.length < 56) return [];
+  var closes = ohlc.closes;
+  var results = [];
+
+  // Hitung EMA50 & BB untuk 2 candle terakhir
+  var ema_now  = calcEMA(closes, 50);
+  var ema_prev = calcEMA(closes.slice(0, closes.length-1), 50);
+  var bb_now   = bbCalc(closes, 20);
+  var bb_prev  = bbCalc(closes.slice(0, closes.length-1), 20);
+
+  if (!ema_now || !ema_prev || !bb_now || !bb_prev) return [];
+
+  var price   = closes[closes.length-1];
+  var e50t    = price > ema_now ? 'BULL' : 'BEAR';
+  var e50val  = ema_now;
+
+  // Helper: apakah terjadi crossing antara dua nilai dari prev ke now
+  function crossed(a_prev, b_prev, a_now, b_now) {
+    // a crossed above b: sebelumnya a < b, sekarang a >= b (atau sebaliknya)
+    var wasBelow = a_prev < b_prev;
+    var nowAbove = a_now >= b_now;
+    var wasAbove = a_prev >= b_prev;
+    var nowBelow = a_now < b_now;
+    if (wasBelow && nowAbove) return 'UP';
+    if (wasAbove && nowBelow) return 'DOWN';
+    return null;
+  }
+
+  var xMid   = crossed(ema_prev, bb_prev.mid,   ema_now, bb_now.mid);
+  var xUpper = crossed(ema_prev, bb_prev.upper, ema_now, bb_now.upper);
+  var xLower = crossed(ema_prev, bb_prev.lower, ema_now, bb_now.lower);
+
+  var useEMA = document.getElementById('emaFilter').checked;
+
+  function makeBase(dir) {
+    var ma5lo = sma(ohlc.lows, 5), ma10lo = sma(ohlc.lows, 10);
+    var ma5hi = sma(ohlc.highs, 5), ma10hi = sma(ohlc.highs, 10);
+    return {
+      direction: dir,
+      price: price,
+      ma5:  dir==='LONG' ? ma5lo  : ma5hi,
+      ma10: dir==='LONG' ? ma10lo : ma10hi,
+      ema50: e50val, e50trend: e50t,
+      midBB: bb_now.mid, upperBB: bb_now.upper, lowerBB: bb_now.lower,
+      closes: closes,
+      maLabel: dir==='LONG' ? 'MA5Lo/MA10Lo' : 'MA5Hi/MA10Hi'
+    };
+  }
+
+  // ── EMA × MidBB ──
+  if (xMid) {
+    var dir = xMid==='UP' ? 'LONG' : 'SHORT';
+    if (!useEMA || !e50t || (dir==='LONG'&&e50t==='BULL') || (dir==='SHORT'&&e50t==='BEAR')) {
+      var gap = pct(ema_now, bb_now.mid);
+      results.push(Object.assign(makeBase(dir), {
+        setup: 'EMA_X_MID',
+        score: Math.max(40, Math.min(Math.round(95 - gap*5), 99)),
+        reason: 'EMA50 ' + (xMid==='UP'?'cross UP':'cross DOWN') + ' MidBB @ ' + fmt(bb_now.mid) + ' (gap ' + gap.toFixed(3) + '%)'
+      }));
+    }
+  }
+
+  // ── EMA × UpperBB ──
+  if (xUpper) {
+    var dir = xUpper==='UP' ? 'SHORT' : 'LONG'; // EMA cross upper ke atas = overbought → SHORT
+    if (!useEMA || !e50t || (dir==='LONG'&&e50t==='BULL') || (dir==='SHORT'&&e50t==='BEAR')) {
+      var gap = pct(ema_now, bb_now.upper);
+      results.push(Object.assign(makeBase(dir), {
+        setup: 'EMA_X_UPPER',
+        score: Math.max(50, Math.min(Math.round(95 - gap*4), 99)),
+        reason: 'EMA50 ' + (xUpper==='UP'?'tembus UpperBB (overbought →SHORT)':'turun dari UpperBB (→LONG)') + ' @ ' + fmt(bb_now.upper)
+      }));
+    }
+  }
+
+  // ── EMA × LowerBB ──
+  if (xLower) {
+    var dir = xLower==='DOWN' ? 'LONG' : 'SHORT'; // EMA cross lower ke bawah = oversold → LONG
+    if (!useEMA || !e50t || (dir==='LONG'&&e50t==='BULL') || (dir==='SHORT'&&e50t==='BEAR')) {
+      var gap = pct(ema_now, bb_now.lower);
+      results.push(Object.assign(makeBase(dir), {
+        setup: 'EMA_X_LOWER',
+        score: Math.max(50, Math.min(Math.round(95 - gap*4), 99)),
+        reason: 'EMA50 ' + (xLower==='DOWN'?'tembus LowerBB (oversold →LONG)':'naik dari LowerBB (→SHORT)') + ' @ ' + fmt(bb_now.lower)
+      }));
+    }
+  }
+
+  // ── EMA × ALL (ketiga BB level terlibat dalam 5 candle terakhir) ──
+  // Rare setup: EMA50 bergerak melewati semua level BB
+  var countCross = 0;
+  if (xMid)   countCross++;
+  if (xUpper) countCross++;
+  if (xLower) countCross++;
+  // Cek candle sebelumnya juga
+  for (var lookback = 2; lookback <= 5; lookback++) {
+    var cl2 = closes.slice(0, closes.length - lookback);
+    var e2  = calcEMA(cl2, 50);
+    var b2  = bbCalc(cl2, 20);
+    if (!e2||!b2) continue;
+    var cl3 = closes.slice(0, closes.length - lookback - 1);
+    var e3  = calcEMA(cl3, 50);
+    var b3  = bbCalc(cl3, 20);
+    if (!e3||!b3) continue;
+    if (crossed(e3, b3.mid,   e2, b2.mid))   countCross++;
+    if (crossed(e3, b3.upper, e2, b2.upper)) countCross++;
+    if (crossed(e3, b3.lower, e2, b2.lower)) countCross++;
+  }
+  if (countCross >= 3) {
+    var dir = ema_now > bb_now.mid ? 'LONG' : 'SHORT';
+    results.push(Object.assign(makeBase(dir), {
+      setup: 'EMA_X_ALL',
+      score: Math.min(Math.round(70 + countCross * 5), 99),
+      reason: 'EMA50 melewati ' + countCross + ' BB level dalam 5 candle — volatilitas tinggi'
+    }));
+  }
+
+  return results;
+}
 async function fetchPairs() {
   var r = await fetch('https://api.binance.com/api/v3/exchangeInfo');
   var d = await r.json();
@@ -490,6 +626,18 @@ async function startScan() {
             fetchOHLC(sym, '15m')
           ]);
           var o4h = results[0], o1h = results[1], o15m = results[2];
+
+          // EMA Cross — cek di setiap TF, tidak perlu 3 TF selaras (event langka)
+          var crossResults = detectEMACross(o15m);
+          if (!crossResults.length) crossResults = detectEMACross(o1h);
+          if (!crossResults.length) crossResults = detectEMACross(o4h);
+          for (var ci = 0; ci < crossResults.length; ci++) {
+            var cr = crossResults[ci];
+            cr.sym = sym; cr.confirmed = false; cr.mtf = null;
+            allResults.push(cr);
+            addLog('✂️ ' + sym + ': ' + cr.setup + ' ' + cr.direction);
+          }
+
           var d4h = detectBest(o4h);
           var d1h = detectBest(o1h);
           var d15m = detectBest(o15m);
@@ -513,8 +661,8 @@ async function startScan() {
             };
             allResults.push(confirmed);
             addLog('✅ ' + sym + ' ' + d15m.direction + ': ' + d4h.setup+'(H4) ' + d1h.setup+'(H1) ' + d15m.setup+'(M15)');
-            renderResults();
           }
+          if (crossResults.length || (d4h&&d1h&&d15m)) renderResults();
         } else {
           var ohlc = await fetchOHLC(sym, singleTF);
           var det = detectBest(ohlc);
@@ -524,6 +672,14 @@ async function startScan() {
             addLog('✅ ' + sym + ': ' + det.setup + ' ' + det.direction);
             renderResults();
           }
+          var crosses = detectEMACross(ohlc);
+          for (var ci = 0; ci < crosses.length; ci++) {
+            var cr = crosses[ci];
+            cr.sym = sym; cr.confirmed = false; cr.mtf = null;
+            allResults.push(cr);
+            addLog('✂️ ' + sym + ': ' + cr.setup + ' ' + cr.direction);
+          }
+          if (crosses.length) renderResults();
         }
       } catch(e) {}
       done++;
@@ -547,11 +703,15 @@ function endScan() {
 }
 
 // ── Render ──
+var CROSS_SETUPS = ['EMA_X_MID','EMA_X_UPPER','EMA_X_LOWER','EMA_X_ALL'];
+
 function getFiltered() {
   return allResults.filter(function(r) {
     if (!r || !r.setup || !r.direction) return false;
+    var isCross = CROSS_SETUPS.indexOf(r.setup) >= 0;
     if (activeTab === 'GOLDEN' && r.setup !== 'GOLDEN_RE') return false;
-    if (activeTab === 'RE' && r.setup === 'GOLDEN_RE') return false;
+    if (activeTab === 'RE' && (r.setup === 'GOLDEN_RE' || isCross)) return false;
+    if (activeTab === 'CROSS' && !isCross) return false;
     if (dirFilter !== 'ALL' && r.direction !== dirFilter) return false;
     if (setupFilter !== 'ALL' && r.setup !== setupFilter) return false;
     return true;
@@ -561,7 +721,8 @@ function getFiltered() {
 function renderResults() {
   var filtered = getFiltered();
   document.getElementById('cntGolden').textContent = allResults.filter(function(r){return r.setup==='GOLDEN_RE';}).length;
-  document.getElementById('cntRE').textContent = allResults.filter(function(r){return r.setup!=='GOLDEN_RE';}).length;
+  document.getElementById('cntRE').textContent = allResults.filter(function(r){return r.setup!=='GOLDEN_RE' && CROSS_SETUPS.indexOf(r.setup)<0;}).length;
+  document.getElementById('cntCross').textContent = allResults.filter(function(r){return CROSS_SETUPS.indexOf(r.setup)>=0;}).length;
 
   if (filtered.length > 0) {
     document.getElementById('summaryRow').style.display = 'flex';
@@ -751,16 +912,24 @@ function setTab(t) {
   activeTab = t; setupFilter = 'ALL';
   var g = document.getElementById('tabGolden');
   var r = document.getElementById('tabRE');
+  var c = document.getElementById('tabCross');
   g.className = 'tab'+(t==='GOLDEN'?' active':'');
   g.style.color = t==='GOLDEN' ? '#FFD700' : '#484f58';
   g.style.borderBottom = t==='GOLDEN' ? '2px solid #FFD700' : '2px solid #21262d';
   r.className = 'tab'+(t==='RE'?' active':'');
   r.style.color = t==='RE' ? '#e3b341' : '#484f58';
   r.style.borderBottom = t==='RE' ? '2px solid #e3b341' : '2px solid #21262d';
-  document.getElementById('reFilters').style.display = t==='RE' ? 'flex' : 'none';
+  c.className = 'tab'+(t==='CROSS'?' active':'');
+  c.style.color = t==='CROSS' ? '#c084fc' : '#484f58';
+  c.style.borderBottom = t==='CROSS' ? '2px solid #c084fc' : '2px solid #21262d';
+  document.getElementById('reFilters').style.display    = t==='RE'    ? 'flex' : 'none';
+  document.getElementById('crossFilters').style.display = t==='CROSS' ? 'flex' : 'none';
   var fbtns = document.querySelectorAll('.filter-btn');
   for (var i = 0; i < fbtns.length; i++) fbtns[i].classList.remove('active');
-  if (fbtns[0]) fbtns[0].classList.add('active');
+  var active = t==='CROSS'
+    ? document.querySelector('#crossFilters .filter-btn')
+    : document.querySelector('#reFilters .filter-btn');
+  if (active) active.classList.add('active');
   renderResults();
 }
 function setSetupFilter(f, el) {

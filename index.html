@@ -5,6 +5,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BBMA Scanner Pro MTF</title>
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BBMA Pro">
+<meta name="theme-color" content="#FFD700">
+<link rel="apple-touch-icon" href="icon-192.png">
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',system-ui,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;padding:16px}
@@ -33,6 +41,13 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0d1117;color:#e6edf3;m
 canvas{display:block;border-radius:4px}
 </style>
 </head>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/fake-insider-bbma-scanner/sw.js')
+      .then(function(reg){ console.log('SW registered:', reg.scope); })
+      .catch(function(err){ console.log('SW error:', err); });
+  }
+</script>
 <body>
 <div style="max-width:960px;margin:0 auto">
 

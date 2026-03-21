@@ -46,7 +46,23 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0d1117;color:#e6edf3;m
 .oi-val{font-size:11px;font-weight:700}
 .oi-chg{font-size:10px;font-weight:700}
 .oi-fund{font-size:9px;font-weight:700}
-canvas{display:block;border-radius:4px}
+/* Entry Panel Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:#000000cc;z-index:1000;overflow-y:auto;padding:16px}
+.modal-box{background:#161b22;border-radius:14px;border:1px solid #30363d;max-width:520px;margin:0 auto;padding:0;overflow:hidden}
+.modal-header{padding:14px 16px;border-bottom:1px solid #21262d;display:flex;align-items:center;justify-content:space-between}
+.modal-body{padding:16px}
+.entry-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:7px;margin-bottom:6px}
+.entry-label{font-size:11px;color:#8b949e;font-weight:600}
+.entry-val{font-size:13px;font-weight:700}
+.rr-bar{height:6px;border-radius:3px;margin-top:3px}
+.tp-row{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:10px 14px;margin-bottom:6px}
+.tp-label{font-size:10px;font-weight:700;margin-bottom:4px}
+.tp-grid{display:flex;gap:16px;flex-wrap:wrap}
+.tp-item{min-width:80px}
+.tp-item-label{font-size:9px;color:#8b949e;margin-bottom:2px}
+.tp-item-val{font-size:12px;font-weight:700}
+.account-bar{background:#161b2280;border:1px solid #21262d;border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+canvas{display
 </style>
 </head>
 <body>
@@ -140,7 +156,57 @@ canvas{display:block;border-radius:4px}
   <div id="doneMsg" style="display:none;margin-top:8px;font-size:11px;font-weight:600;color:#3fb950"></div>
 </div>
 
-<div style="display:flex;gap:2px;overflow-x:auto">
+<!-- Account Settings -->
+
+<div class="account-bar">
+  <span style="font-size:10px;color:#8b949e;font-weight:600;white-space:nowrap">💰 Akun:</span>
+  <div style="display:flex;align-items:center;gap:5px">
+    <span style="font-size:10px;color:#8b949e">Balance $</span>
+    <input type="number" id="accountBalance" value="1000" min="1"
+      style="width:90px;background:#21262d;color:#e6edf3;border:1px solid #30363d;border-radius:5px;padding:3px 7px;font-size:11px;font-weight:600">
+  </div>
+  <div style="display:flex;align-items:center;gap:5px">
+    <span style="font-size:10px;color:#8b949e">Risk</span>
+    <input type="number" id="riskPct" value="2" min="0.1" max="100" step="0.5"
+      style="width:55px;background:#21262d;color:#FFD700;border:1px solid #FFD70050;border-radius:5px;padding:3px 7px;font-size:11px;font-weight:700">
+    <span style="font-size:10px;color:#8b949e">%</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:5px">
+    <span style="font-size:10px;color:#8b949e">Leverage</span>
+    <input type="number" id="leverage" value="10" min="1" max="125"
+      style="width:55px;background:#21262d;color:#e3b341;border:1px solid #e3b34150;border-radius:5px;padding:3px 7px;font-size:11px;font-weight:700">
+    <span style="font-size:10px;color:#8b949e">x</span>
+  </div>
+  <span style="font-size:10px;color:#484f58">Klik card untuk lihat Entry Order</span>
+</div>
+
+<!-- Entry Order Modal -->
+
+<div class="modal-overlay" id="entryModal" onclick="closeModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="modalIcon" style="font-size:18px">⭐</span>
+        <div>
+          <div id="modalTitle" style="font-weight:700;font-size:15px;color:#fff"></div>
+          <div id="modalSubtitle" style="font-size:10px;color:#8b949e;margin-top:1px"></div>
+        </div>
+      </div>
+      <button onclick="document.getElementById('entryModal').style.display='none'"
+        style="background:none;border:none;color:#8b949e;font-size:18px;cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Entry Zone -->
+      <div id="entryZonePanel"></div>
+      <!-- TP/SL Panel -->
+      <div id="tpslPanel"></div>
+      <!-- Position Size -->
+      <div id="positionPanel"></div>
+      <!-- RR Summary -->
+      <div id="rrPanel"></div>
+    </div>
+  </div>
+</div>
   <button class="tab active" id="tabGolden" onclick="setTab('GOLDEN')" style="color:#FFD700;border-bottom:2px solid #FFD700">
     ⭐ Golden RE <span id="cntGolden" style="background:#21262d;color:#FFD700;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:3px">0</span>
   </button>
@@ -469,7 +535,162 @@ function detectEMACross(ohlc){
   return results;
 }
 
-// ── Fetch pair list ──
+// ── Entry Order Calculation ──
+function calcEntry(d) {
+  var balance  = parseFloat(document.getElementById('accountBalance').value) || 1000;
+  var riskPct  = parseFloat(document.getElementById('riskPct').value) || 2;
+  var leverage = parseFloat(document.getElementById('leverage').value) || 10;
+  var isLong   = d.direction === 'LONG';
+  var price    = d.price;
+
+  // Entry: Lower BB M15 for LONG, Upper BB M15 for SHORT
+  // We use the M15 BB values stored in the card (lowerBB/upperBB)
+  var entry    = isLong ? d.lowerBB : d.upperBB;
+
+  // SL: just outside BB + 0.3% buffer
+  var slBuffer = entry * 0.003;
+  var sl       = isLong ? entry - slBuffer : entry + slBuffer;
+
+  // TP levels
+  var tp1 = d.midBB;   // MidBB M15
+  var tp2 = isLong ? d.upperBB : d.lowerBB;  // opposite BB wall
+  // TP3: extend beyond BB by same distance as BB width
+  var bbWidth = d.upperBB - d.lowerBB;
+  var tp3 = isLong ? d.upperBB + bbWidth * 0.5 : d.lowerBB - bbWidth * 0.5;
+
+  // Risk per unit
+  var riskPerUnit = Math.abs(entry - sl);
+  if (riskPerUnit === 0) riskPerUnit = entry * 0.003;
+
+  // RR ratios
+  var rr1 = Math.abs(tp1 - entry) / riskPerUnit;
+  var rr2 = Math.abs(tp2 - entry) / riskPerUnit;
+  var rr3 = Math.abs(tp3 - entry) / riskPerUnit;
+
+  // Position sizing: riskAmt = balance * riskPct/100
+  var riskAmt    = balance * riskPct / 100;
+  var positionUSD = (riskAmt / riskPerUnit) * entry;  // notional value
+  var positionWithLev = positionUSD / leverage;        // margin needed
+  var qty        = positionUSD / entry;               // units
+
+  return { entry, sl, tp1, tp2, tp3, rr1, rr2, rr3,
+           riskAmt, positionUSD, positionWithLev, qty,
+           riskPerUnit, riskPct, balance, leverage, isLong };
+}
+
+function openEntryModal(idx) {
+  var filtered = getFiltered();
+  var d = filtered[idx];
+  if (!d) return;
+  var m = META[d.setup] || {label:d.setup, color:'#58a6ff', icon:'●'};
+  var col = d.direction === 'LONG' ? '#3fb950' : '#f85149';
+  var e = calcEntry(d);
+
+  document.getElementById('modalIcon').textContent = m.icon;
+  document.getElementById('modalTitle').textContent = d.sym.replace('USDT','/USDT') + ' — ' + d.direction;
+  document.getElementById('modalSubtitle').textContent = m.label + ' · ' + (d.maLabel||'') + ' · Score ' + d.score + '%';
+
+  // Entry Zone
+  document.getElementById('entryZonePanel').innerHTML =
+    '<div style="background:#0d1117;border-radius:8px;padding:12px;margin-bottom:10px;border:1px solid '+col+'40">'
+    +'<div style="font-size:10px;color:#8b949e;font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📍 Entry Zone ('+( e.isLong?'Lower BB M15':'Upper BB M15')+')</div>'
+    +'<div style="display:flex;gap:16px;flex-wrap:wrap">'
+    +'<div><div style="font-size:9px;color:#8b949e">Entry Price</div><div style="font-size:16px;font-weight:800;color:'+col+'">$'+fmt(e.entry)+'</div></div>'
+    +'<div><div style="font-size:9px;color:#8b949e">Current Price</div><div style="font-size:16px;font-weight:800;color:#e6edf3">$'+fmt(d.price)+'</div></div>'
+    +'<div><div style="font-size:9px;color:#8b949e">Jarak ke Entry</div>'
+    +'<div style="font-size:14px;font-weight:700;color:#e3b341">'
+    +(e.isLong ? (d.price>e.entry?'▼ ':'▲ ') : (d.price<e.entry?'▲ ':'▼ '))
+    +Math.abs((d.price-e.entry)/e.entry*100).toFixed(2)+'%</div></div>'
+    +'</div></div>';
+
+  // TP/SL
+  var tpColor = e.isLong ? '#3fb950' : '#f85149';
+  var slColor = e.isLong ? '#f85149' : '#3fb950';
+  document.getElementById('tpslPanel').innerHTML =
+    '<div style="margin-bottom:10px">'
+    +'<div style="font-size:10px;color:#8b949e;font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🎯 Take Profit & Stop Loss</div>'
+
+    // SL
+    +'<div class="tp-row" style="border-color:#f8514940;background:#f8514908">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center">'
+    +'<div class="tp-label" style="color:#f85149">🛑 Stop Loss</div>'
+    +'<span style="font-size:9px;color:#8b949e">Buffer 0.3% luar BB</span></div>'
+    +'<div class="tp-grid">'
+    +'<div class="tp-item"><div class="tp-item-label">Harga SL</div><div class="tp-item-val" style="color:#f85149">$'+fmt(e.sl)+'</div></div>'
+    +'<div class="tp-item"><div class="tp-item-label">Risk/unit</div><div class="tp-item-val" style="color:#f85149">$'+fmt(e.riskPerUnit)+'</div></div>'
+    +'<div class="tp-item"><div class="tp-item-label">Risk Amount</div><div class="tp-item-val" style="color:#f85149">$'+e.riskAmt.toFixed(2)+'</div></div>'
+    +'</div></div>'
+
+    // TP1
+    +'<div class="tp-row" style="border-color:#58a6ff40;background:#58a6ff08">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center">'
+    +'<div class="tp-label" style="color:#58a6ff">🎯 TP1 — MidBB M15</div>'
+    +'<span style="font-size:9px;background:#58a6ff22;color:#58a6ff;padding:1px 6px;border-radius:4px;font-weight:700">RR 1:'+e.rr1.toFixed(2)+'</span></div>'
+    +'<div class="tp-grid">'
+    +'<div class="tp-item"><div class="tp-item-label">Target</div><div class="tp-item-val" style="color:#58a6ff">$'+fmt(e.tp1)+'</div></div>'
+    +'<div class="tp-item"><div class="tp-item-label">Profit</div><div class="tp-item-val" style="color:#58a6ff">+$'+(e.riskAmt*e.rr1).toFixed(2)+'</div></div>'
+    +'<div class="tp-item"><div class="tp-item-label">Aksi</div><div class="tp-item-val" style="color:#8b949e;font-size:10px">30% · geser SL→BE</div></div>'
+    +'</div>'
+    +'<div class="rr-bar" style="background:linear-gradient(90deg,#58a6ff,transparent);width:'+Math.min(e.rr1/3*100,100)+'%"></div>'
+    +'</div>'
+
+    // TP2
+    +'<div class="tp-row" style="border-color:#e3b34140;background:#e3b34108">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center">'
+    +'<div class="tp-label" style="color:#e3b341">🎯 TP2 — '+(e.isLong?'Upper':'Lower')+' BB M15</div>'
+    +'<span style="font-size:9px;background:#e3b34122;color:#e3b341;padding:1px 6px;border-radius:4px;font-weight:700">RR 1:'+e.rr2.toFixed(2)+'</span></div>'
+    +'<div class="tp-grid">'
+    +'<div class="tp-item"><div class="tp-item-label">Target</div><div class="tp-item-val" style="color:#e3b341">$'+fmt(e.tp2)+'</div></div>'
+    +'<div class="tp-item"><div class="tp-item-label">Profit</div><div class="tp-item-val" style="color:#e3b341">+$'+(e.riskAmt*e.rr2).toFixed(2)+'</div></div>'
+    +'<div class="tp-item"><div class="tp-item-label">Aksi</div><div class="tp-item-val" style="color:#8b949e;font-size:10px">70% posisi</div></div>'
+    +'</div>'
+    +'<div class="rr-bar" style="background:linear-gradient(90deg,#e3b341,transparent);width:'+Math.min(e.rr2/3*100,100)+'%"></div>'
+    +'</div>'
+
+    // TP3
+    +'<div class="tp-row" style="border-color:#3fb95040;background:#3fb95008">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center">'
+    +'<div class="tp-label" style="color:#3fb950">🚀 TP3 — Extended (Runner)</div>'
+    +'<span style="font-size:9px;background:#3fb95022;color:#3fb950;padding:1px 6px;border-radius:4px;font-weight:700">RR 1:'+e.rr3.toFixed(2)+'</span></div>'
+    +'<div class="tp-grid">'
+    +'<div class="tp-item"><div class="tp-item-label">Target</div><div class="tp-item-val" style="color:#3fb950">$'+fmt(e.tp3)+'</div></div>'
+    +'<div class="tp-item"><div class="tp-item-label">Profit</div><div class="tp-item-val" style="color:#3fb950">+$'+(e.riskAmt*e.rr3).toFixed(2)+'</div></div>'
+    +'<div class="tp-item"><div class="tp-item-label">Aksi</div><div class="tp-item-val" style="color:#8b949e;font-size:10px">Sisa posisi</div></div>'
+    +'</div>'
+    +'<div class="rr-bar" style="background:linear-gradient(90deg,#3fb950,transparent);width:'+Math.min(e.rr3/3*100,100)+'%"></div>'
+    +'</div>'
+    +'</div>';
+
+  // Position Size
+  document.getElementById('positionPanel').innerHTML =
+    '<div style="background:#0d1117;border-radius:8px;padding:12px;margin-bottom:10px;border:1px solid #21262d">'
+    +'<div style="font-size:10px;color:#8b949e;font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">💼 Position Sizing ('+e.riskPct+'% risk · '+e.leverage+'x leverage)</div>'
+    +'<div style="display:flex;gap:14px;flex-wrap:wrap">'
+    +'<div><div style="font-size:9px;color:#8b949e">Balance</div><div style="font-size:13px;font-weight:700;color:#e6edf3">$'+e.balance.toLocaleString()+'</div></div>'
+    +'<div><div style="font-size:9px;color:#8b949e">Risk Amount</div><div style="font-size:13px;font-weight:700;color:#f85149">$'+e.riskAmt.toFixed(2)+'</div></div>'
+    +'<div><div style="font-size:9px;color:#8b949e">Margin Dipakai</div><div style="font-size:13px;font-weight:700;color:#e3b341">$'+e.positionWithLev.toFixed(2)+'</div></div>'
+    +'<div><div style="font-size:9px;color:#8b949e">Notional Size</div><div style="font-size:13px;font-weight:700;color:#58a6ff">$'+e.positionUSD.toFixed(2)+'</div></div>'
+    +'<div><div style="font-size:9px;color:#8b949e">Qty ('+d.sym.replace('USDT','')+')</div><div style="font-size:13px;font-weight:700;color:#e6edf3">'+e.qty.toFixed(4)+'</div></div>'
+    +'</div></div>';
+
+  // RR Summary
+  var best = Math.max(e.rr1, e.rr2, e.rr3);
+  var rrColor = best >= 2 ? '#3fb950' : best >= 1.5 ? '#e3b341' : '#f85149';
+  document.getElementById('rrPanel').innerHTML =
+    '<div style="background:'+(best>=2?'#3fb95015':best>=1.5?'#e3b34115':'#f8514915')+';border:1px solid '+(best>=2?'#3fb95040':best>=1.5?'#e3b34140':'#f8514940')+';border-radius:8px;padding:12px;text-align:center">'
+    +'<div style="font-size:11px;color:#8b949e;margin-bottom:4px">Best Risk/Reward</div>'
+    +'<div style="font-size:24px;font-weight:800;color:'+rrColor+'">1 : '+best.toFixed(2)+'</div>'
+    +'<div style="font-size:10px;color:#8b949e;margin-top:4px">'
+    +(best>=2?'✅ Setup layak — RR baik':'⚠️ RR kurang ideal — pertimbangkan ulang')
+    +'</div></div>';
+
+  document.getElementById('entryModal').style.display = 'block';
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('entryModal'))
+    document.getElementById('entryModal').style.display = 'none';
+}
 async function fetchPairs(){
   var r=await fetch('https://api.binance.com/api/v3/exchangeInfo');
   var d=await r.json();
@@ -639,7 +860,7 @@ function renderResults(){
     var confirmedBadge=d.confirmed?'<span style="font-size:9px;background:#3fb95020;color:#3fb950;border:1px solid #3fb95060;padding:1px 5px;border-radius:4px;font-weight:700">MTF✓</span>':'';
     var maZone='<span style="font-size:9px;background:'+col+'20;color:'+col+';border:1px solid '+col+'40;padding:1px 5px;border-radius:4px">'+(d.direction==='LONG'?'Lo Zone':'Hi Zone')+'</span>';
 
-    html+='<div class="result-card" style="border:1px solid '+(d.confirmed?'#3fb95040':m.color+'30')+'">'
+    html+='<div class="result-card" onclick="openEntryModal('+i+')" style="border:1px solid '+(d.confirmed?'#3fb95040':m.color+'30')+';cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor=\''+(d.confirmed?'#3fb950':'#58a6ff')+'\'" onmouseout="this.style.borderColor=\''+(d.confirmed?'#3fb95040':m.color+'30')+'\'">'
       +'<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">'
       +'<div style="min-width:140px">'
       +'<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'

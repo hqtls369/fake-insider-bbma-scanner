@@ -535,7 +535,99 @@ function detectEMACross(ohlc){
   return results;
 }
 
-// ── Entry Order Calculation ──
+// ── Telegram ──
+async function sendTelegram(text) {
+  var token  = document.getElementById('tgToken').value.trim();
+  var chatId = document.getElementById('tgChatId').value.trim();
+  if (!token || !chatId) return false;
+  try {
+    var r = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+      })
+    });
+    var d = await r.json();
+    return d.ok;
+  } catch(e) { return false; }
+}
+
+async function testTelegram() {
+  var st = document.getElementById('tgStatus');
+  st.style.display = '';
+  st.style.color = '#8b949e';
+  st.textContent = '⏳ Testing...';
+  var ok = await sendTelegram('✅ <b>BBMA Scanner Pro</b> terhubung!\n\nAlert Telegram aktif dan siap mengirim signal.');
+  st.style.color = ok ? '#3fb950' : '#f85149';
+  st.textContent = ok ? '✅ Berhasil! Bot terhubung.' : '❌ Gagal. Cek token & chat ID.';
+}
+
+function buildTelegramMsg(d, withEntry) {
+  var m   = META[d.setup] || {label:d.setup, icon:'●'};
+  var dir = d.direction === 'LONG' ? '🟢 LONG' : '🔴 SHORT';
+  var sym = d.sym.replace('USDT', '/USDT');
+  var mtfConfirm = d.confirmed ? '\n✅ <b>MTF CONFIRMED</b> (H4·H1·M15)' : '';
+  var e50 = d.e50trend ? '\n📈 EMA50: ' + (d.e50trend==='BULL' ? '▲ BULL' : '▼ BEAR') : '';
+
+  var oiStr = '';
+  if (d.oi) {
+    var oi = d.oi;
+    var h4  = oi.h4  ? (oi.h4.trend==='UP'?'▲':'▼')+oi.h4.chg.toFixed(2)+'%'  : '-';
+    var h1  = oi.h1  ? (oi.h1.trend==='UP'?'▲':'▼')+oi.h1.chg.toFixed(2)+'%'  : '-';
+    var m15 = oi.m15 ? (oi.m15.trend==='UP'?'▲':'▼')+oi.m15.chg.toFixed(2)+'%': '-';
+    oiStr = '\n📊 <b>OI:</b> H4 '+h4+' · H1 '+h1+' · M15 '+m15;
+    if (oi.funding !== null) oiStr += '\n💸 Funding: '+(oi.funding>0?'+':'')+oi.funding.toFixed(4)+'%';
+  }
+
+  var entryStr = '';
+  if (withEntry && d.lowerBB && d.upperBB) {
+    var e = calcEntry(d);
+    entryStr = '\n\n📍 <b>ENTRY ORDER</b>'
+      + '\nEntry: <code>$' + fmt(e.entry) + '</code>'
+      + '\n🛑 SL: <code>$' + fmt(e.sl) + '</code>'
+      + '\n🎯 TP1: <code>$' + fmt(e.tp1) + '</code> (RR 1:'+e.rr1.toFixed(2)+')'
+      + '\n🎯 TP2: <code>$' + fmt(e.tp2) + '</code> (RR 1:'+e.rr2.toFixed(2)+')'
+      + '\n🚀 TP3: <code>$' + fmt(e.tp3) + '</code> (RR 1:'+e.rr3.toFixed(2)+')'
+      + '\n\n💼 Size: <code>$'+e.positionUSD.toFixed(2)+'</code> notional'
+      + ' · Margin: <code>$'+e.positionWithLev.toFixed(2)+'</code>'
+      + ' · Qty: <code>'+e.qty.toFixed(4)+'</code>';
+  }
+
+  return m.icon + ' <b>' + sym + '</b> — ' + dir
+    + '\n📐 Setup: <b>' + m.label + '</b>'
+    + '\n💰 Price: <code>$' + fmt(d.price) + '</code>'
+    + '\n📊 Score: ' + d.score + '%'
+    + mtfConfirm + e50 + oiStr + entryStr
+    + '\n\n<a href="https://www.tradingview.com/chart/?symbol=BINANCE:' + d.sym + '">📈 Lihat Chart</a>'
+    + '\n⏰ ' + new Date().toLocaleTimeString();
+}
+
+async function sendSignalAlert(d) {
+  if (!document.getElementById('tgEnabled').checked) return;
+  var mode = document.getElementById('tgAlertMode').value;
+  if (mode === 'confirm' && !d.confirmed) return;
+  var msg = buildTelegramMsg(d, true);
+  await sendTelegram(msg);
+}
+
+async function sendToTelegramFromModal(idx) {
+  var filtered = getFiltered();
+  var d = filtered[idx];
+  if (!d) return;
+  var btn = document.getElementById('tgSendBtn');
+  btn.textContent = '⏳ Sending...';
+  btn.disabled = true;
+  var msg = buildTelegramMsg(d, true);
+  var ok = await sendTelegram(msg);
+  btn.textContent = ok ? '✅ Terkirim!' : '❌ Gagal';
+  btn.style.background = ok ? '#23863630' : '#b6232430';
+  btn.style.borderColor = ok ? '#238636' : '#b62324';
+  setTimeout(function(){ btn.textContent='✈️ Kirim ke Telegram'; btn.disabled=false; btn.style.background='#29a8e015'; btn.style.borderColor='#29a8e050'; }, 3000);
+}
 function calcEntry(d) {
   var balance  = parseFloat(document.getElementById('accountBalance').value) || 1000;
   var riskPct  = parseFloat(document.getElementById('riskPct').value) || 2;
@@ -673,20 +765,20 @@ function openEntryModal(idx) {
     +'<div><div style="font-size:9px;color:#8b949e">Qty ('+d.sym.replace('USDT','')+')</div><div style="font-size:13px;font-weight:700;color:#e6edf3">'+e.qty.toFixed(4)+'</div></div>'
     +'</div></div>';
 
-  // RR Summary
-  var best = Math.max(e.rr1, e.rr2, e.rr3);
-  var rrColor = best >= 2 ? '#3fb950' : best >= 1.5 ? '#e3b341' : '#f85149';
+      // RR Summary + Telegram Button
   document.getElementById('rrPanel').innerHTML =
-    '<div style="background:'+(best>=2?'#3fb95015':best>=1.5?'#e3b34115':'#f8514915')+';border:1px solid '+(best>=2?'#3fb95040':best>=1.5?'#e3b34140':'#f8514940')+';border-radius:8px;padding:12px;text-align:center">'
+    '<div style="background:'+(best>=2?'#3fb95015':best>=1.5?'#e3b34115':'#f8514915')+';border:1px solid '+(best>=2?'#3fb95040':best>=1.5?'#e3b34140':'#f8514940')+';border-radius:8px;padding:12px;text-align:center;margin-bottom:10px">'
     +'<div style="font-size:11px;color:#8b949e;margin-bottom:4px">Best Risk/Reward</div>'
     +'<div style="font-size:24px;font-weight:800;color:'+rrColor+'">1 : '+best.toFixed(2)+'</div>'
     +'<div style="font-size:10px;color:#8b949e;margin-top:4px">'
     +(best>=2?'✅ Setup layak — RR baik':'⚠️ RR kurang ideal — pertimbangkan ulang')
-    +'</div></div>';
+    +'</div></div>'
+    +'<button id="tgSendBtn" onclick="sendToTelegramFromModal('+idx+')" '
+    +'style="width:100%;padding:10px;background:#29a8e015;color:#29a8e0;border:1px solid #29a8e050;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px">'
+    +'✈️ Kirim ke Telegram</button>';
 
-  document.getElementById('entryModal').style.display = 'block';
-}
-
+  var best = Math.max(e.rr1, e.rr2, e.rr3);
+  var rrColor = best >= 2 ? '#3fb950' : best >= 1.5 ? '#e3b341' : '#f85149';
 function closeModal(e) {
   if (e.target === document.getElementById('entryModal'))
     document.getElementById('entryModal').style.display = 'none';
@@ -744,13 +836,14 @@ async function startScan(){
               mtf:{'4h':{setup:d4h.setup,direction:d4h.direction,score:d4h.score},'1h':{setup:d1h.setup,direction:d1h.direction,score:d1h.score},'15m':{setup:d15m.setup,direction:d15m.direction,score:d15m.score}}};
             allResults.push(confirmed);
             addLog('✅ '+sym+' '+d15m.direction+': '+d4h.setup+'(H4) '+d1h.setup+'(H1) '+d15m.setup+'(M15)'+(sig?' '+sig.text:''));
+            sendSignalAlert(confirmed);
           }
           if(crosses.length||(d4h&&d1h&&d15m)) renderResults();
         } else {
           var ohlc=await fetchOHLC(sym,singleTF);
           if(useOI) oi=await fetchOIMTF(sym);
           var det=detectBest(ohlc);
-          if(det){var sig=oiSignal(oi,det.direction);det.sym=sym;det.confirmed=false;det.mtf=null;det.oi=oi;det.oiSignal=sig;allResults.push(det);addLog('✅ '+sym+': '+det.setup+' '+det.direction);renderResults();}
+          if(det){var sig=oiSignal(oi,det.direction);det.sym=sym;det.confirmed=false;det.mtf=null;det.oi=oi;det.oiSignal=sig;allResults.push(det);addLog('✅ '+sym+': '+det.setup+' '+det.direction);sendSignalAlert(det);renderResults();}
           var crosses=detectEMACross(ohlc);
           for(var ci=0;ci<crosses.length;ci++){var cr=crosses[ci];cr.sym=sym;cr.confirmed=false;cr.mtf=null;cr.oi=oi;allResults.push(cr);addLog('✂️ '+sym+': '+cr.setup+' '+cr.direction);}
           if(crosses.length) renderResults();

@@ -199,6 +199,9 @@ canvas{display:block;border-radius:4px}
   <button class="tab" id="tabCross" onclick="setTab('CROSS')">
     ✂️ EMA×BB <span id="cntCross" style="background:#21262d;color:#c084fc;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:3px">0</span>
   </button>
+  <button class="tab" id="tabTracker" onclick="setTab('TRACKER')">
+    🎯 Tracker
+  </button>
 </div>
 
 <div class="panel">
@@ -229,6 +232,64 @@ canvas{display:block;border-radius:4px}
     <p style="font-size:10px;color:#484f58">Klik ⭐ SCAN untuk mulai</p>
   </div>
   <div id="noResultState" style="display:none;text-align:center;padding:28px;color:#8b949e;font-size:12px">Tidak ada signal. Coba naikkan threshold atau matikan filter.</div>
+
+  <!-- TRACKER PANEL -->
+
+  <div id="trackerPanel" style="display:none">
+
+```
+<!-- Input -->
+<div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
+  <div style="flex:1;min-width:140px">
+    <div class="ctrl-label">Symbol (tanpa USDT)</div>
+    <div style="display:flex;gap:6px">
+      <input type="text" id="trackerSym" placeholder="BTC, ETH, SOL..." value="BTC"
+        style="flex:1;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px"
+        oninput="this.value=this.value.toUpperCase()">
+      <button onclick="runTracker()" id="trackerBtn"
+        style="padding:6px 16px;background:#FFD700;color:#000;border:none;border-radius:5px;cursor:pointer;font-weight:800;font-size:13px;white-space:nowrap">
+        🔄 Refresh
+      </button>
+    </div>
+  </div>
+  <div>
+    <div class="ctrl-label">Alert TF trigger</div>
+    <div style="display:flex;gap:3px">
+      <button class="btn active" id="trk4h" onclick="toggleTrkTF('4h',this)">H4</button>
+      <button class="btn active" id="trk1h" onclick="toggleTrkTF('1h',this)">H1</button>
+      <button class="btn active" id="trk15m" onclick="toggleTrkTF('15m',this)">M15</button>
+    </div>
+  </div>
+  <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;align-self:flex-end;padding-bottom:1px">
+    <input type="checkbox" id="trkAutoAlert" checked style="accent-color:#29a8e0;width:13px;height:13px">
+    <span style="color:#e6edf3">Auto-alert TG</span>
+  </label>
+</div>
+
+<!-- Status -->
+<div id="trkStatus" style="display:none;font-size:11px;margin-bottom:10px;padding:6px 10px;border-radius:6px;background:#21262d"></div>
+
+<!-- TF Cards -->
+<div id="trkCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;margin-bottom:10px"></div>
+
+<!-- Setup Detected -->
+<div id="trkSetupPanel" style="display:none;margin-bottom:10px">
+  <div style="font-size:10px;color:#8b949e;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🚨 Setup Terdeteksi</div>
+  <div id="trkSetupList"></div>
+</div>
+
+<!-- OI MTF -->
+<div id="trkOIPanel" style="display:none">
+  <div style="font-size:10px;color:#8b949e;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📊 Open Interest MTF</div>
+  <div id="trkOIContent"></div>
+</div>
+
+<div id="trkEmpty" style="text-align:center;padding:40px;color:#484f58;font-size:12px">
+  Masukkan symbol dan klik 🔄 Refresh untuk mulai tracking
+</div>
+```
+
+  </div>
 </div>
 
 <!-- Entry Modal -->
@@ -683,7 +744,229 @@ async function sendModalAlert(idx){
   setTimeout(function(){btn.textContent='✈️ Kirim ke Telegram';btn.disabled=false;btn.style.background='#29a8e015';btn.style.borderColor='#29a8e050';},3000);
 }
 
-// ── Scan ──
+// ── TRACKER ──
+var trkActiveTFs = {'4h':true,'1h':true,'15m':true};
+var trkLastSetups = {};
+
+function toggleTrkTF(tf, el) {
+  trkActiveTFs[tf] = !trkActiveTFs[tf];
+  el.className = 'btn' + (trkActiveTFs[tf] ? ' active' : '');
+}
+
+async function runTracker() {
+  var sym = document.getElementById('trackerSym').value.trim().toUpperCase();
+  if (!sym) return;
+  var fullSym = sym + 'USDT';
+  var btn = document.getElementById('trackerBtn');
+  btn.textContent = '⏳'; btn.disabled = true;
+  document.getElementById('trkEmpty').style.display = 'none';
+  document.getElementById('trkStatus').style.display = '';
+  document.getElementById('trkStatus').textContent = '🔄 Fetching ' + fullSym + '...';
+  document.getElementById('trkStatus').style.background = '#21262d';
+  document.getElementById('trkStatus').style.color = '#8b949e';
+
+  try {
+    var [o4h, o1h, o15m, oi] = await Promise.all([
+      fetchOHLC(fullSym, '4h'),
+      fetchOHLC(fullSym, '1h'),
+      fetchOHLC(fullSym, '15m'),
+      fetchOIMTF(fullSym)
+    ]);
+
+    if (!o4h || !o1h || !o15m) throw new Error('Data tidak tersedia untuk ' + fullSym);
+
+    var tfs = [
+      {key:'4h', label:'H4', color:'#f0b429', ohlc:o4h},
+      {key:'1h', label:'H1', color:'#e3b341', ohlc:o1h},
+      {key:'15m',label:'M15',color:'#3dc9b0', ohlc:o15m}
+    ];
+
+    // Render TF cards
+    var cardsHTML = '';
+    var detectedSetups = [];
+
+    for (var ti = 0; ti < tfs.length; ti++) {
+      var tf = tfs[ti];
+      var cl = tf.ohlc.closes, hi = tf.ohlc.highs, lo = tf.ohlc.lows;
+      var price = cl[cl.length-1];
+      var ma5l = sma(lo,5), ma10l = sma(lo,10);
+      var ma5h = sma(hi,5), ma10h = sma(hi,10);
+      var b = bbCalc(cl,20);
+      var e50 = calcEMA(cl,50);
+      var e50t = cl.length>=55&&e50 ? (price>e50?'BULL':'BEAR') : null;
+      var trend8 = (cl[cl.length-1]-cl[cl.length-8])/cl[cl.length-8]*100;
+
+      // Determine position relative to indicators
+      var aboveEMA = e50 ? price > e50 : null;
+      var bbPos = b ? (price > b.upper ? 'ABOVE' : price < b.lower ? 'BELOW' : 'INSIDE') : null;
+
+      // Detect setup for this TF
+      var det = detectBest(tf.ohlc);
+      if (det && trkActiveTFs[tf.key]) {
+        det.sym = fullSym; det.confirmed = false; det.mtf = null; det.oi = oi;
+        det.tfLabel = tf.label;
+        detectedSetups.push(det);
+      }
+
+      var trendCol = trend8 > 0 ? '#3fb950' : '#f85149';
+      var e50Col = e50t === 'BULL' ? '#3fb950' : e50t === 'BEAR' ? '#f85149' : '#484f58';
+      var bbPosCol = bbPos === 'ABOVE' ? '#f85149' : bbPos === 'BELOW' ? '#3fb950' : '#e3b341';
+      var bbPosText = bbPos === 'ABOVE' ? '▲ Above Upper' : bbPos === 'BELOW' ? '▼ Below Lower' : '● Inside BB';
+
+      function indRow(label, val, col2, extra) {
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #21262d20">'
+          + '<span style="font-size:10px;color:#8b949e">'+label+'</span>'
+          + '<div style="text-align:right">'
+          + '<span style="font-size:11px;font-weight:700;color:'+col2+'">'+fmt(val)+'</span>'
+          + (extra ? '<span style="font-size:9px;color:#484f58;margin-left:4px">'+extra+'</span>' : '')
+          + '</div></div>';
+      }
+
+      var priceVsMid = b ? ((price-b.mid)/b.mid*100).toFixed(2) : null;
+
+      cardsHTML += '<div style="background:#0d1117;border-radius:10px;padding:13px;border:1px solid '+tf.color+'40">'
+        // Header
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+        + '<div style="display:flex;align-items:center;gap:6px">'
+        + '<span style="font-size:12px;font-weight:800;color:'+tf.color+'">'+tf.label+'</span>'
+        + '<span style="font-size:14px;font-weight:800;color:#fff">$'+fmt(price)+'</span>'
+        + '</div>'
+        + '<div style="display:flex;gap:5px">'
+        + '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:'+trendCol+'22;color:'+trendCol+';border:1px solid '+trendCol+'50">'+(trend8>0?'▲ +':'▼ ')+trend8.toFixed(2)+'%</span>'
+        + (e50t?'<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:'+e50Col+'22;color:'+e50Col+';border:1px solid '+e50Col+'50">EMA50 '+(e50t==='BULL'?'▲BULL':'▼BEAR')+'</span>':'')
+        + '</div>'
+        + '</div>'
+        // BB position badge
+        + '<div style="text-align:center;margin-bottom:8px">'
+        + '<span style="font-size:10px;font-weight:700;background:'+bbPosCol+'20;color:'+bbPosCol+';border:1px solid '+bbPosCol+'50;padding:3px 10px;border-radius:5px">'+bbPosText+(priceVsMid?' ('+priceVsMid+'% vs Mid)':'')+'</span>'
+        + '</div>'
+        // Indicators
+        + '<div style="border-top:1px solid #21262d;padding-top:8px">'
+        + indRow('MA5 Low', ma5l, '#3fb950', pct(price,ma5l||1).toFixed(2)+'% away')
+        + indRow('MA10 Low', ma10l, '#3fb950', pct(price,ma10l||1).toFixed(2)+'% away')
+        + indRow('MA5 High', ma5h, '#f85149', pct(price,ma5h||1).toFixed(2)+'% away')
+        + indRow('MA10 High', ma10h, '#f85149', pct(price,ma10h||1).toFixed(2)+'% away')
+        + indRow('EMA50', e50, '#ff7b54', e50t||'')
+        + indRow('Upper BB', b&&b.upper, '#f85149')
+        + indRow('Mid BB', b&&b.mid, '#58a6ff')
+        + indRow('Lower BB', b&&b.lower, '#3fb950')
+        + '</div>'
+        // Setup badge
+        + (det ? '<div style="margin-top:8px;padding:6px 10px;background:'+(META[det.setup]||{color:'#58a6ff'}).color+'20;border:1px solid '+(META[det.setup]||{color:'#58a6ff'}).color+'50;border-radius:6px;display:flex;justify-content:space-between;align-items:center">'
+          + '<span style="font-size:10px;font-weight:700;color:'+(META[det.setup]||{color:'#58a6ff'}).color+'">'+(META[det.setup]||{icon:'',label:det.setup}).icon+' '+(META[det.setup]||{label:det.setup}).label+'</span>'
+          + '<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;background:'+(det.direction==='LONG'?'#3fb950':'#f85149')+';color:#000">'+det.direction+'</span>'
+          + '</div>' : '')
+        + '</div>';
+    }
+
+    document.getElementById('trkCards').innerHTML = cardsHTML;
+
+    // Setup panel
+    var setupPanel = document.getElementById('trkSetupPanel');
+    var setupList = document.getElementById('trkSetupList');
+    if (detectedSetups.length > 0) {
+      setupPanel.style.display = '';
+      var setupHTML = '';
+      var newSetups = [];
+
+      for (var si = 0; si < detectedSetups.length; si++) {
+        var det = detectedSetups[si];
+        var m2 = META[det.setup] || {label:det.setup, color:'#58a6ff', icon:'●'};
+        var col3 = det.direction === 'LONG' ? '#3fb950' : '#f85149';
+        var e2 = calcEntry(det);
+        setupHTML += '<div style="background:#0d1117;border-radius:8px;padding:10px 13px;margin-bottom:6px;border:1px solid '+m2.color+'40">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+          + '<div style="display:flex;gap:6px;align-items:center">'
+          + '<span style="font-size:12px">'+m2.icon+'</span>'
+          + '<span style="font-weight:700;font-size:13px;color:#fff">'+fullSym.replace('USDT','/USDT')+'</span>'
+          + '<span style="font-size:9px;font-weight:700;background:'+(det.tfLabel==='H4'?'#f0b429':det.tfLabel==='H1'?'#e3b341':'#3dc9b0')+'22;color:'+(det.tfLabel==='H4'?'#f0b429':det.tfLabel==='H1'?'#e3b341':'#3dc9b0')+';padding:1px 6px;border-radius:4px">'+det.tfLabel+'</span>'
+          + '<span style="font-size:9px;background:'+m2.color+'22;color:'+m2.color+';padding:1px 6px;border-radius:4px;font-weight:700">'+m2.label+'</span>'
+          + '</div>'
+          + '<span style="font-size:11px;font-weight:800;background:'+col3+';color:#000;padding:2px 8px;border-radius:4px">'+det.direction+'</span>'
+          + '</div>'
+          + '<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:10px">'
+          + '<span style="color:#8b949e">Score: <strong style="color:'+(det.score>70?'#3fb950':det.score>45?'#e3b341':'#f85149')+'">'+det.score+'%</strong></span>'
+          + '<span style="color:#8b949e">Entry: <strong style="color:'+col3+'">$'+fmt(e2.entry)+'</strong></span>'
+          + '<span style="color:#8b949e">SL: <strong style="color:#f85149">$'+fmt(e2.sl)+'</strong></span>'
+          + '<span style="color:#8b949e">TP1: <strong style="color:#58a6ff">$'+fmt(e2.tp1)+'</strong></span>'
+          + '<span style="color:#8b949e">TP2: <strong style="color:#e3b341">$'+fmt(e2.tp2)+'</strong></span>'
+          + '<span style="color:#8b949e">Best RR: <strong style="color:#3fb950">1:'+Math.max(e2.rr1,e2.rr2,e2.rr3).toFixed(2)+'</strong></span>'
+          + '</div>'
+          + '</div>';
+
+        // Check if this is a new setup vs last scan
+        var setupKey = det.tfLabel + '_' + det.setup + '_' + det.direction;
+        if (!trkLastSetups[setupKey]) {
+          newSetups.push({det:det, e:e2});
+          trkLastSetups[setupKey] = true;
+        }
+      }
+      setupList.innerHTML = setupHTML;
+
+      // Auto alert for new setups
+      if (document.getElementById('trkAutoAlert').checked && newSetups.length > 0) {
+        for (var ni = 0; ni < newSetups.length; ni++) {
+          var ns = newSetups[ni];
+          var msg = '🎯 <b>TRACKER ALERT — '+fullSym.replace('USDT','/USDT')+'</b>\n'
+            + 'TF: <b>'+ns.det.tfLabel+'</b> · ' + (META[ns.det.setup]||{icon:'',label:ns.det.setup}).icon + ' '+(META[ns.det.setup]||{label:ns.det.setup}).label+'\n'
+            + '<b>'+(ns.det.direction==='LONG'?'🟢 LONG':'🔴 SHORT')+'</b> · Score '+ns.det.score+'%\n'
+            + '💰 Price: <code>$'+fmt(ns.det.price)+'</code>\n\n'
+            + '📍 Entry: <code>$'+fmt(ns.e.entry)+'</code>\n'
+            + '🛑 SL: <code>$'+fmt(ns.e.sl)+'</code>\n'
+            + '🎯 TP1: <code>$'+fmt(ns.e.tp1)+'</code> RR 1:'+ns.e.rr1.toFixed(2)+'\n'
+            + '🎯 TP2: <code>$'+fmt(ns.e.tp2)+'</code> RR 1:'+ns.e.rr2.toFixed(2)+'\n'
+            + '🚀 TP3: <code>$'+fmt(ns.e.tp3)+'</code> RR 1:'+ns.e.rr3.toFixed(2)+'\n\n'
+            + '<a href="https://www.tradingview.com/chart/?symbol=BINANCE:'+fullSym+'">📈 Chart</a>'
+            + ' · '+new Date().toLocaleTimeString();
+          await sendTelegram(msg);
+        }
+      }
+    } else {
+      setupPanel.style.display = 'none';
+      trkLastSetups = {}; // reset jika tidak ada setup
+    }
+
+    // OI Panel
+    if (oi) {
+      document.getElementById('trkOIPanel').style.display = '';
+      var oiHTML = '<div style="background:#0d1117;border-radius:8px;padding:12px;border:1px solid #21262d">'
+        + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">';
+      function oiBlock(lbl, data, funding) {
+        if (!data) return '<div><div style="font-size:9px;color:#484f58;font-weight:700">'+lbl+'</div><div style="color:#484f58">-</div></div>';
+        var c3 = data.trend==='UP'?'#3fb950':'#f85149';
+        var html = '<div style="background:'+(data.trend==='UP'?'#3fb95015':'#f8514915')+';border:1px solid '+(data.trend==='UP'?'#3fb95040':'#f8514940')+';border-radius:6px;padding:8px">'
+          +'<div style="font-size:9px;color:#8b949e;font-weight:700;margin-bottom:3px">'+lbl+'</div>'
+          +'<div style="font-size:18px;font-weight:800;color:'+c3+'">'+(data.trend==='UP'?'▲':'▼')+'</div>'
+          +'<div style="font-size:11px;font-weight:700;color:'+c3+'">'+Math.abs(data.chg).toFixed(3)+'%</div>'
+          +(funding!==null&&funding!==undefined?'<div style="font-size:9px;color:'+(funding>0.05?'#f85149':funding<-0.05?'#3fb950':'#e3b341')+'margin-top:2px">'+(funding>0?'+':'')+funding.toFixed(4)+'%</div>':'')
+          +'</div>';
+        return html;
+      }
+      oiHTML += oiBlock('H4', oi.h4);
+      oiHTML += oiBlock('H1', oi.h1);
+      oiHTML += oiBlock('M15', oi.m15, oi.funding);
+      var sig2 = oiSignal(oi, detectedSetups.length>0?detectedSetups[0].direction:'LONG');
+      oiHTML += '<div style="background:#21262d;border-radius:6px;padding:8px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px">'
+        + '<div style="font-size:9px;color:#8b949e">Bias OI</div>'
+        + (sig2?'<div style="font-size:10px;font-weight:700;color:'+sig2.color+'">'+sig2.text+'</div>':'<div style="color:#484f58">-</div>')
+        + '<div style="font-size:9px;color:#8b949e">Bull:'+oi.bullTF+' Bear:'+oi.bearTF+'</div>'
+        + '</div>';
+      oiHTML += '</div></div>';
+      document.getElementById('trkOIContent').innerHTML = oiHTML;
+    }
+
+    document.getElementById('trkStatus').textContent = '✅ '+fullSym+' updated · '+new Date().toLocaleTimeString()+(detectedSetups.length>0?' · 🚨 '+detectedSetups.length+' setup detected':'');
+    document.getElementById('trkStatus').style.background = detectedSetups.length>0?'#3fb95020':'#21262d';
+    document.getElementById('trkStatus').style.color = detectedSetups.length>0?'#3fb950':'#8b949e';
+
+  } catch(err) {
+    document.getElementById('trkStatus').textContent = '❌ Error: '+err.message;
+    document.getElementById('trkStatus').style.background = '#f8514920';
+    document.getElementById('trkStatus').style.color = '#f85149';
+  }
+
+  btn.textContent = '🔄 Refresh'; btn.disabled = false;
+}
 async function startScan(){
   if(scanning) return;
   scanning=true; aborted=false; allResults=[];
@@ -914,8 +1197,8 @@ function setDir(d){
 }
 function setTab(t){
   activeTab=t;setupFilter='ALL';
-  var map={GOLDEN:'#FFD700',RE:'#e3b341',CROSS:'#c084fc'};
-  ['GOLDEN','RE','CROSS'].forEach(function(k){
+  var map={GOLDEN:'#FFD700',RE:'#e3b341',CROSS:'#c084fc',TRACKER:'#58a6ff'};
+  ['GOLDEN','RE','CROSS','TRACKER'].forEach(function(k){
     var el=document.getElementById('tab'+k.charAt(0)+k.slice(1).toLowerCase());
     if(!el) return;
     el.className='tab'+(t===k?' active':'');
@@ -924,10 +1207,19 @@ function setTab(t){
   });
   document.getElementById('reFilters').style.display=t==='RE'?'flex':'none';
   document.getElementById('crossFilters').style.display=t==='CROSS'?'flex':'none';
-  var pool=document.querySelectorAll(t==='CROSS'?'#crossFilters .filter-btn':'#reFilters .filter-btn');
-  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
-  if(pool[0]) pool[0].classList.add('active');
-  renderResults();
+  // Show/hide scanner vs tracker
+  var scannerEls=['summaryRow','resultsContainer','emptyState','noResultState','reFilters','crossFilters'];
+  scannerEls.forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.style.display=t==='TRACKER'?'none':(id==='summaryRow'&&allResults.length>0?'flex':id==='emptyState'&&allResults.length===0?'':'');
+  });
+  document.getElementById('trackerPanel').style.display=t==='TRACKER'?'':'none';
+  if(t!=='TRACKER'){
+    var pool=document.querySelectorAll(t==='CROSS'?'#crossFilters .filter-btn':'#reFilters .filter-btn');
+    document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
+    if(pool[0]) pool[0].classList.add('active');
+    renderResults();
+  }
 }
 function setSetupFilter(f,el){
   setupFilter=f;

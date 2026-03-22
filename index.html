@@ -739,7 +739,9 @@ function buildMsg(d,withEntry){
       +'\n🚀 TP3: <code>$'+fmt(e.tp3)+'</code> RR 1:'+e.rr3.toFixed(2)
       +'\n💼 Margin: <code>$'+e.positionWithLev.toFixed(2)+'</code> Qty: <code>'+e.qty.toFixed(4)+'</code>';
   }
-  txt+='\n\n<a href="https://www.tradingview.com/chart/?symbol=BINANCE:'+d.sym+'">📈 Chart</a> · '+new Date().toLocaleTimeString();
+  txt+='\n\n<a href="https://www.tradingview.com/chart/?symbol=BINANCE:'+d.sym.replace('USDT','')+'USDTPERP">📈 Futures Chart</a>'
+    +' | <a href="https://www.tradingview.com/chart/?symbol=BINANCE:'+d.sym+'">Spot</a>'
+    +' · '+new Date().toLocaleTimeString();
   return txt;
 }
 async function sendAlert(d, isNew){
@@ -1044,7 +1046,8 @@ async function runTracker(){
             +'\n🎯 TP1: <code>$'+fmt(ns.e.tp1)+'</code> RR 1:'+ns.e.rr1.toFixed(2)
             +'\n🎯 TP2: <code>$'+fmt(ns.e.tp2)+'</code> RR 1:'+ns.e.rr2.toFixed(2)
             +'\n💼 Margin: <code>$'+ns.e.positionWithLev.toFixed(2)+'</code>'
-            +'\n\n<a href="https://www.tradingview.com/chart/?symbol=BINANCE:'+sym+'">📈 Chart</a> · '+new Date().toLocaleTimeString();
+            +'\n\n<a href="https://www.tradingview.com/chart/?symbol=BINANCE:'+sym.replace('USDT','')+'USDTPERP">📈 Futures Chart</a>'
+            +' · '+new Date().toLocaleTimeString();
           sendTelegram(msg);
         }
       }
@@ -1128,21 +1131,33 @@ function renderResults(){
       var emaBdg=d.e50trend?'<span class="mtf-badge" style="background:'+eb+';border:1px solid '+ebb2+'"><span style="color:#ff7b54;font-size:8px">EMA50</span><span style="color:'+ec+'">'+(d.e50trend==='BULL'?'▲':'▼')+'</span></span>':'';
       mtfH='<div class="mtf-row"><span style="font-size:9px;color:#8b949e">MTF:</span>'+bdg+emaBdg+'<span class="mtf-badge" style="background:#3fb95020;border:1px solid #3fb95060;color:#3fb950;font-weight:800">✅ CONFIRM</span></div>';
     } else if(d.e50trend){var ec=d.e50trend==='BULL'?'#3fb950':'#f85149',eb=d.e50trend==='BULL'?'#3fb95020':'#f8514920',ebb2=d.e50trend==='BULL'?'#3fb95060':'#f8514960';mtfH='<div class="mtf-row"><span class="mtf-badge" style="background:'+eb+';border:1px solid '+ebb2+'"><span style="color:#ff7b54;font-size:8px">EMA50</span><span style="color:'+ec+'">'+(d.e50trend==='BULL'?'▲':'▼')+'</span></span></div>';}
-    // OI+CVD panel
+    // OI+CVD panel — hanya tampil jika ada data dan checkbox ON
     var oiH='';
     if(d.oi&&document.getElementById('oiEnabled').checked){
       var oi=d.oi,sig=d.oiSignal;
       function oiC(lbl,oiD,cvdD){
         var oiC2=oiD?(oiD.trend==='UP'?'#3fb950':'#f85149'):'#484f58';
         var cvdC2=cvdD?(cvdD.trend==='UP'?'#3fb950':'#f85149'):'#484f58';
-        return'<div class="oi-cell"><div style="font-size:8px;color:#484f58;font-weight:700">'+lbl+'</div>'
+        return'<div class="oi-cell">'
+          +'<div style="font-size:8px;color:#484f58;font-weight:700">'+lbl+'</div>'
           +(oiD?'<div style="font-size:10px;font-weight:700;color:'+oiC2+'">'+(oiD.trend==='UP'?'▲':'▼')+' '+Math.abs(oiD.chg).toFixed(2)+'%</div>':'<div style="color:#484f58;font-size:10px">-</div>')
           +(cvdD?'<div style="font-size:9px;font-weight:700;color:'+cvdC2+'">CVD '+(cvdD.trend==='UP'?'▲':'▼')+'</div>':'')
           +'</div>';
       }
-      oiH='<div class="oi-panel"><div style="font-size:9px;color:#484f58;font-weight:600;display:flex;justify-content:space-between"><span>OI + CVD MTF</span>'+(sig?'<span style="color:'+sig.color+'">'+sig.text+'</span>':'')+'</div>'
-        +'<div class="oi-grid">'+oiC('H4',oi.h4,oi.cvd&&oi.cvd.h4)+oiC('H1',oi.h1,oi.cvd&&oi.cvd.h1)+oiC('M15',oi.m15,oi.cvd&&oi.cvd.m15)
-        +(oi.funding!==null&&oi.funding!==undefined?'<div class="oi-cell"><div style="font-size:8px;color:#484f58;font-weight:700">FR</div><div style="font-size:10px;font-weight:700;color:'+(oi.funding>0.05?'#f85149':oi.funding<-0.05?'#3fb950':'#e3b341')+'">'+(oi.funding>0?'+':'')+oi.funding.toFixed(4)+'%</div></div>':'')
+      var fundStr='';
+      if(oi.funding!==null&&oi.funding!==undefined){
+        var fc=oi.funding>0.05?'#f85149':oi.funding<-0.05?'#3fb950':'#e3b341';
+        fundStr='<div class="oi-cell"><div style="font-size:8px;color:#484f58;font-weight:700">FR</div>'
+          +'<div style="font-size:10px;font-weight:700;color:'+fc+'">'+(oi.funding>0?'+':'')+oi.funding.toFixed(4)+'%</div></div>';
+      }
+      oiH='<div class="oi-panel">'
+        +'<div style="font-size:9px;color:#484f58;font-weight:600;display:flex;justify-content:space-between;margin-bottom:3px">'
+        +'<span>OI + CVD + Funding</span>'+(sig?'<span style="color:'+sig.color+'">'+sig.text+'</span>':'')+'</div>'
+        +'<div class="oi-grid">'
+        +oiC('H4',oi.h4,oi.cvd&&oi.cvd.h4)
+        +oiC('H1',oi.h1,oi.cvd&&oi.cvd.h1)
+        +oiC('M15',oi.m15,oi.cvd&&oi.cvd.m15)
+        +fundStr
         +'</div></div>';
     }
     var cfBdg=d.confirmed?'<span style="font-size:9px;background:#3fb95020;color:#3fb950;border:1px solid #3fb95060;padding:1px 5px;border-radius:4px;font-weight:700">MTF✓</span>':'';
@@ -1166,7 +1181,7 @@ function renderResults(){
   }
   document.getElementById('resultsContainer').innerHTML=html;
 
-  // Draw forecast charts
+// Draw forecast charts
   for(var i=0;i<filtered.length;i++){
     (function(d,idx){
       var cv=document.getElementById('cv'+idx);

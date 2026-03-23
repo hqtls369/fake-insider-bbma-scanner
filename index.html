@@ -719,7 +719,7 @@ function buildMsg(d,withEntry){
     +'\n📐 <b>'+m.label+'</b> · Score '+d.score+'%'
     +'\n💰 Price: <code>$'+fmt(d.price)+'</code>'
     +(d.confirmed?'\n✅ <b>MTF CONFIRMED</b> H4·H1·M15':'')
-    +(d.e50trend?'\n📈 EMA50: '+(d.e50trend==='BULL'?'▲ BULL':'▼ BEAR'):'');
+    +(d.confirmed&&d.ema4h?'\n📈 EMA50 MTF: H4 '+(d.ema4h==='BULL'?'▲BULL':'▼BEAR')+' · H1 '+(d.ema1h==='BULL'?'▲BULL':'▼BEAR')+' · M15 '+(d.ema15m==='BULL'?'▲BULL':'▼BEAR'):d.e50trend?'\n📈 EMA50: '+(d.e50trend==='BULL'?'▲ BULL':'▼ BEAR'):'');
   if(d.oi){
     var h4t=d.oi.h4?(d.oi.h4.trend==='UP'?'▲':'▼')+d.oi.h4.chg.toFixed(2)+'%':'-';
     var h1t=d.oi.h1?(d.oi.h1.trend==='UP'?'▲':'▼')+d.oi.h1.chg.toFixed(2)+'%':'-';
@@ -1126,11 +1126,43 @@ function renderResults(){
     // MTF badges
     var mtfH='';
     if(d.confirmed&&d.mtf){
-      var bdg='';for(var t=0;t<MTF_TFS.length;t++){var tf2=MTF_TFS[t],td=d.mtf[tf2];if(!td)continue;var mm=META[td.setup]||{color:'#58a6ff'};var dc=td.direction==='LONG'?'#3fb95030':'#f8514930';var bc2=td.direction==='LONG'?'#3fb95060':'#f8514960';var sn=td.setup.replace('GOLDEN_RE','GRE').replace('RE_KLASIK','REK').replace('PULLBACK','PB').replace('EXTREME','EXT');bdg+='<span class="mtf-badge" style="background:'+dc+';border:1px solid '+bc2+'"><span style="color:'+MTF_LABELS[tf2].color+';font-size:8px">'+MTF_LABELS[tf2].label+'</span><span style="color:'+mm.color+'">'+sn+'</span><span style="color:'+(td.direction==='LONG'?'#3fb950':'#f85149')+'">'+(td.direction==='LONG'?'▲':'▼')+'</span></span>';}
+      var bdg='';
+      for(var t=0;t<MTF_TFS.length;t++){
+        var tf2=MTF_TFS[t],td=d.mtf[tf2];
+        if(!td) continue;
+        var mm=META[td.setup]||{color:'#58a6ff'};
+        var dc=td.direction==='LONG'?'#3fb95030':'#f8514930';
+        var bc2=td.direction==='LONG'?'#3fb95060':'#f8514960';
+        var sn=td.setup.replace('GOLDEN_RE','GRE').replace('RE_KLASIK','REK').replace('PULLBACK','PB').replace('EXTREME','EXT');
+        bdg+='<span class="mtf-badge" style="background:'+dc+';border:1px solid '+bc2+'">'
+          +'<span style="color:'+MTF_LABELS[tf2].color+';font-size:8px">'+MTF_LABELS[tf2].label+'</span>'
+          +'<span style="color:'+mm.color+'">'+sn+'</span>'
+          +'<span style="color:'+(td.direction==='LONG'?'#3fb950':'#f85149')+'">'+(td.direction==='LONG'?'▲':'▼')+'</span>'
+          +'</span>';
+      }
+      // EMA50 per TF badges
+      var emaPerTF=[
+        {lbl:'H4',val:d.ema4h||d.e50trend},
+        {lbl:'H1',val:d.ema1h||d.e50trend},
+        {lbl:'M15',val:d.ema15m||d.e50trend}
+      ];
+      var emaBdgs=emaPerTF.map(function(x){
+        if(!x.val) return '';
+        var ec2=x.val==='BULL'?'#3fb950':'#f85149';
+        return'<span class="mtf-badge" style="background:'+ec2+'18;border:1px solid '+ec2+'50">'
+          +'<span style="color:#ff7b54;font-size:8px">'+x.lbl+'</span>'
+          +'<span style="color:'+ec2+'">'+(x.val==='BULL'?'▲':'▼')+'</span>'
+          +'</span>';
+      }).join('');
+      mtfH='<div class="mtf-row">'
+        +'<span style="font-size:9px;color:#8b949e">MTF:</span>'+bdg
+        +'<span style="font-size:9px;color:#8b949e;margin-left:2px">EMA50:</span>'+emaBdgs
+        +'<span class="mtf-badge" style="background:#3fb95020;border:1px solid #3fb95060;color:#3fb950;font-weight:800">✅ CONFIRM</span>'
+        +'</div>';
+    } else if(d.e50trend){
       var ec=d.e50trend==='BULL'?'#3fb950':'#f85149',eb=d.e50trend==='BULL'?'#3fb95020':'#f8514920',ebb2=d.e50trend==='BULL'?'#3fb95060':'#f8514960';
-      var emaBdg=d.e50trend?'<span class="mtf-badge" style="background:'+eb+';border:1px solid '+ebb2+'"><span style="color:#ff7b54;font-size:8px">EMA50</span><span style="color:'+ec+'">'+(d.e50trend==='BULL'?'▲':'▼')+'</span></span>':'';
-      mtfH='<div class="mtf-row"><span style="font-size:9px;color:#8b949e">MTF:</span>'+bdg+emaBdg+'<span class="mtf-badge" style="background:#3fb95020;border:1px solid #3fb95060;color:#3fb950;font-weight:800">✅ CONFIRM</span></div>';
-    } else if(d.e50trend){var ec=d.e50trend==='BULL'?'#3fb950':'#f85149',eb=d.e50trend==='BULL'?'#3fb95020':'#f8514920',ebb2=d.e50trend==='BULL'?'#3fb95060':'#f8514960';mtfH='<div class="mtf-row"><span class="mtf-badge" style="background:'+eb+';border:1px solid '+ebb2+'"><span style="color:#ff7b54;font-size:8px">EMA50</span><span style="color:'+ec+'">'+(d.e50trend==='BULL'?'▲':'▼')+'</span></span></div>';}
+      mtfH='<div class="mtf-row"><span class="mtf-badge" style="background:'+eb+';border:1px solid '+ebb2+'"><span style="color:#ff7b54;font-size:8px">EMA50</span><span style="color:'+ec+'">'+(d.e50trend==='BULL'?'▲ BULL':'▼ BEAR')+'</span></span></div>';
+    }
     // OI+CVD panel — hanya tampil jika ada data dan checkbox ON
     var oiH='';
     if(d.oi&&document.getElementById('oiEnabled').checked){

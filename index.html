@@ -144,7 +144,7 @@ canvas{display:block;border-radius:4px}
       </div>
     </div>
     <div>
-      <button class="btn active" id="autoOff" onclick="setAutoScan(0)">OFF</button>
+      <div style="border-left:1px solid #21262d;padding-left:12px;flex:1">
       <div class="ctrl-label">BB×EMA Gap: <span id="mergeLabel" style="color:#ff6ef7;font-weight:700">2%</span></div>
       <input type="range" id="mergeSlider" min="0.1" max="5" step="0.5" value="2"
         oninput="document.getElementById('mergeLabel').textContent=this.value+'%'"

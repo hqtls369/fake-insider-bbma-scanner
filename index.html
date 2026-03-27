@@ -143,19 +143,7 @@ canvas{display:block;border-radius:4px}
         <button class="btn" id="auto60" onclick="setAutoScan(60)">1h</button>
       </div>
     </div>
-    <div>
-      <div class="ctrl-label">BB×EMA Gap: <span id="mergeLabel" style="color:#ff6ef7;font-weight:700">2%</span></div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <input type="range" id="mergeSlider" min="0.1" max="5" step="0.1" value="2"
-          oninput="document.getElementById('mergeLabel').textContent=parseFloat(this.value).toFixed(1)+'%'"
-          style="width:100px;accent-color:#ff6ef7;cursor:pointer">
-        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;white-space:nowrap">
-          <input type="checkbox" id="mergeEnabled" checked style="accent-color:#ff6ef7;width:13px;height:13px">
-          <span id="mergeBadge" style="background:#ff6ef722;color:#ff6ef7;border:1px solid #ff6ef750;font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px">ON</span>
-        </label>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:9px;color:#484f58;margin-top:1px;width:106px"><span>0.1%</span><span>5%</span></div>
-    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
       <div class="countdown-ring" id="countdownRing" style="display:none">
         <span id="countdownVal">--</span>
       </div>
@@ -223,7 +211,6 @@ canvas{display:block;border-radius:4px}
 <div style="display:flex;gap:2px;overflow-x:auto">
   <button class="tab active" id="tabGolden" onclick="setTab('GOLDEN')" style="color:#FFD700;border-bottom:2px solid #FFD700">⭐ Golden <span id="cntGolden" style="background:#21262d;color:#FFD700;font-size:9px;padding:1px 4px;border-radius:8px;margin-left:2px">0</span></button>
   <button class="tab" id="tabRE" onclick="setTab('RE')">🔁 RE <span id="cntRE" style="background:#21262d;color:#e3b341;font-size:9px;padding:1px 4px;border-radius:8px;margin-left:2px">0</span></button>
-  <button class="tab" id="tabMerge" onclick="setTab('MERGE')">🔮 BB×EMA <span id="cntMerge" style="background:#21262d;color:#ff6ef7;font-size:9px;padding:1px 4px;border-radius:8px;margin-left:2px">0</span></button>
   <button class="tab" id="tabCross" onclick="setTab('CROSS')">✂️ EMA×BB <span id="cntCross" style="background:#21262d;color:#c084fc;font-size:9px;padding:1px 4px;border-radius:8px;margin-left:2px">0</span></button>
   <button class="tab" id="tabTracker" onclick="setTab('TRACKER')">🎯 Tracker</button>
   <button class="tab" id="tabJournal" onclick="setTab('JOURNAL')">📒 Journal <span id="cntJournal" style="background:#21262d;color:#e3b341;font-size:9px;padding:1px 4px;border-radius:8px;margin-left:2px">0</span></button>
@@ -238,15 +225,7 @@ canvas{display:block;border-radius:4px}
     <button class="filter-btn" onclick="setSetupFilter('EXTREME',this)">Extreme</button>
     <button class="filter-btn" onclick="setSetupFilter('CSM',this)">CSM</button>
   </div>
-  <!-- Merge filter -->
-  <div id="mergeFilters" style="display:none;flex-wrap:wrap;gap:4px;margin-bottom:10px;align-items:center">
-    <button class="filter-btn active" onclick="setSetupFilter('ALL',this)" style="border-color:#ff6ef750;color:#ff6ef7">Semua TF</button>
-    <button class="filter-btn" onclick="setSetupFilter('H4',this)" style="color:#f0b429">H4</button>
-    <button class="filter-btn" onclick="setSetupFilter('H1',this)" style="color:#e3b341">H1</button>
-    <button class="filter-btn" onclick="setSetupFilter('M15',this)" style="color:#3dc9b0">M15</button>
-    <button class="filter-btn" onclick="setSetupFilter('SQUEEZE',this)" style="color:#ff6ef7">🔥 Squeeze</button>
-    <button class="filter-btn" onclick="setSetupFilter('FLAT_BB',this)" style="color:#c084fc">📏 Flat BB</button>
-  </div>
+  <div id="crossFilters" style="display:none;flex-wrap:wrap;gap:4px;margin-bottom:10px">
     <button class="filter-btn active" onclick="setSetupFilter('ALL',this)">Semua</button>
     <button class="filter-btn" onclick="setSetupFilter('EMA_X_MID',this)">✂️ EMA×Mid</button>
     <button class="filter-btn" onclick="setSetupFilter('EMA_X_UPPER',this)">🔺 Upper</button>
@@ -370,7 +349,6 @@ var allResults=[], scanning=false, aborted=false;
 var prevSignalKeys={};
 var autoScanInterval=0, autoScanTimer=null, autoCountdown=0, countdownTick=null;
 var CROSS=['EMA_X_MID','EMA_X_UPPER','EMA_X_LOWER','EMA_X_ALL'];
-var MERGE=['BB_EMA_MERGE'];
 var MTF_TFS=['4h','1h','15m'];
 var MTF_LABELS={'4h':{label:'H4',color:'#f0b429'},'1h':{label:'H1',color:'#e3b341'},'15m':{label:'M15',color:'#3dc9b0'}};
 var META={
@@ -379,7 +357,6 @@ var META={
   PULLBACK:   {label:'Pullback',   color:'#9d7cd8',icon:'↩️'},
   EXTREME:    {label:'Extreme',    color:'#f0b429',icon:'⚡'},
   CSM:        {label:'CSM',        color:'#3dc9b0',icon:'🔹'},
-  BB_EMA_MERGE:{label:'BB×EMA',   color:'#ff6ef7',icon:'🔮'},
   EMA_X_MID:  {label:'EMA×MidBB', color:'#c084fc',icon:'✂️'},
   EMA_X_UPPER:{label:'EMA×Upper', color:'#f87171',icon:'🔺'},
   EMA_X_LOWER:{label:'EMA×Lower', color:'#34d399',icon:'🔻'},
@@ -648,70 +625,7 @@ async function fetchOICVD(sym){
   }catch(e){return null;}
 }
 
-// ── BB×EMA Merge Detection ──
-// Deteksi zona konsolidasi: MidBB ≈ EMA50 + BB datar (flat)
-// Tidak perlu MTF confirm — scan independen per TF
-function detectBBEMAMerge(ohlc, tolerancePct, tfLabel) {
-  tolerancePct = tolerancePct || 2.0;
-  if (!ohlc || !ohlc.closes || ohlc.closes.length < 55) return null;
-  var cl = ohlc.closes, hi = ohlc.highs, lo = ohlc.lows;
-  var price = cl[cl.length-1];
-  var b = bbCalc(cl, 20);
-  var e50 = calcEMA(cl, 50);
-  if (!b || !e50) return null;
-
-  // ① Jarak MidBB ↔ EMA50
-  var gap = pct(b.mid, e50);
-  if (gap >= tolerancePct) return null;
-
-  // ② BB Flatness — bandingkan MidBB sekarang vs 5 candle lalu
-  // Flat = perubahan MidBB < 0.5% dalam 5 candle
-  var bPrev = bbCalc(cl.slice(0, cl.length-5), 20);
-  var midChange = bPrev ? pct(b.mid, bPrev.mid) : 999;
-  var isFlatBB = midChange < 0.5;
-
-  // ③ BB Width (squeeze indicator)
-  var bbWidthPct = (b.upper - b.lower) / b.mid * 100;
-  var isSqueeze = bbWidthPct < 4.0;
-
-  // Merge zone = rata-rata MidBB dan EMA50
-  var mergeZone = (b.mid + e50) / 2;
-  var ma5l = sma(lo,5), ma10l = sma(lo,10);
-  var ma5h = sma(hi,5), ma10h = sma(hi,10);
-  var trend8 = (cl[cl.length-1]-cl[cl.length-8])/cl[cl.length-8]*100;
-  var direction = price > mergeZone ? 'LONG' : 'SHORT';
-
-  // Score: gap kecil + BB flat + squeeze = score tinggi
-  var score = Math.max(20, Math.min(Math.round(
-    (1 - gap/tolerancePct) * 50 +
-    (isFlatBB ? 25 : Math.max(0, 15 - midChange*10)) +
-    (isSqueeze ? 15 : Math.max(0, 10 - bbWidthPct)) +
-    Math.min(Math.abs(trend8)*2, 10)
-  ), 99));
-
-  // Tags untuk display
-  var tags = [];
-  if (isFlatBB) tags.push('📏 Flat BB');
-  if (isSqueeze) tags.push('🔥 Squeeze');
-  if (gap < 0.3) tags.push('⚡ Ultra Merge');
-
-  return {
-    price, mergeZone,
-    ma5:  direction==='LONG'?ma5l:ma5h,
-    ma10: direction==='LONG'?ma10l:ma10h,
-    ema50: e50, e50trend: price>e50?'BULL':'BEAR',
-    midBB: b.mid, upperBB: b.upper, lowerBB: b.lower,
-    closes: cl, direction, score,
-    gap: gap.toFixed(3),
-    midChangePct: midChange.toFixed(3),
-    bbWidthPct: bbWidthPct.toFixed(2),
-    isSqueeze, isFlatBB,
-    tfLabel: tfLabel,
-    tags: tags,
-    maLabel: direction==='LONG'?'MA5Lo/MA10Lo':'MA5Hi/MA10Hi',
-    reason: 'Gap '+gap.toFixed(3)+'% · BB Width '+bbWidthPct.toFixed(2)+'%'+(isFlatBB?' · MidBB Δ'+midChange.toFixed(3)+'%':'')+' · '+tags.join(' ')
-  };
-}
+// ── Detection ──
 function detectBest(ohlc){
   if(!ohlc||!ohlc.closes||ohlc.closes.length<22) return null;
   var thresh=parseFloat(document.getElementById('threshSlider').value);
@@ -996,23 +910,7 @@ async function startScan(isAuto){
         if(useOI) fArr.push(fetchOICVD(sym));
         var res=await Promise.all(fArr);
         var o4=res[0],o1=res[1],o15=res[2],oi=useOI?res[3]:null;
-                  // ── BB×EMA Merge — scan independen per TF, tidak perlu MTF confirm ──
-          var mergeEnabled = document.getElementById('mergeEnabled').checked;
-          if(mergeEnabled){
-            var mergeTol = parseFloat(document.getElementById('mergeSlider').value) || 2.0;
-            [{key:'4h',lbl:'H4',o:o4},{key:'1h',lbl:'H1',o:o1},{key:'15m',lbl:'M15',o:o15}].forEach(function(tf){
-              var mg = detectBBEMAMerge(tf.o, mergeTol, tf.lbl);
-              if(!mg) return;
-              mg.sym=sym; mg.setup='BB_EMA_MERGE'; mg.confirmed=false; mg.mtf=null;
-              mg.oi=oi; mg.ema4h=ema4h; mg.ema1h=ema1h; mg.ema15m=ema15m;
-              allResults.push(mg);
-              var km=sym+'_BB_EMA_MERGE_'+tf.lbl+'_'+mg.direction;
-              var isNm=!previousKeys[km]; prevSignalKeys[km]=true;
-              addLog('🔮 '+sym+' ['+tf.lbl+'] gap '+mg.gap+'%'+(mg.isFlatBB?' 📏':'')+(mg.isSqueeze?' 🔥':''));
-              sendAlert(mg, isNm);
-            });
-            renderResults();
-          }
+        var crosses=detectEMACross(o15);
         if(!crosses.length) crosses=detectEMACross(o1);
         if(!crosses.length) crosses=detectEMACross(o4);
         for(var ci=0;ci<crosses.length;ci++){
@@ -1193,20 +1091,11 @@ function getFiltered(){
   return allResults.filter(function(r){
     if(!r||!r.setup||!r.direction) return false;
     var isCross=CROSS.indexOf(r.setup)>=0;
-    var isMerge=r.setup==='BB_EMA_MERGE';
     if(activeTab==='GOLDEN'&&r.setup!=='GOLDEN_RE') return false;
-    if(activeTab==='RE'&&(r.setup==='GOLDEN_RE'||isCross||isMerge)) return false;
+    if(activeTab==='RE'&&(r.setup==='GOLDEN_RE'||isCross)) return false;
     if(activeTab==='CROSS'&&!isCross) return false;
-    if(activeTab==='MERGE'&&!isMerge) return false;
     if(dirFilter!=='ALL'&&r.direction!==dirFilter) return false;
-    if(activeTab==='MERGE'&&setupFilter!=='ALL'){
-      if(setupFilter==='SQUEEZE'&&!r.isSqueeze) return false;
-      if(setupFilter==='FLAT_BB'&&!r.isFlatBB) return false;
-      if(setupFilter==='H4'&&r.tfLabel!=='H4') return false;
-      if(setupFilter==='H1'&&r.tfLabel!=='H1') return false;
-      if(setupFilter==='M15'&&r.tfLabel!=='M15') return false;
-    }
-    if(activeTab!=='MERGE'&&setupFilter!=='ALL'&&r.setup!==setupFilter) return false;
+    if(setupFilter!=='ALL'&&r.setup!==setupFilter) return false;
     return true;
   }).sort(function(a,b){return(b.score||0)-(a.score||0);});
 }
@@ -1214,9 +1103,8 @@ function getFiltered(){
 function renderResults(){
   var filtered=getFiltered();
   document.getElementById('cntGolden').textContent=allResults.filter(function(r){return r.setup==='GOLDEN_RE';}).length;
-  document.getElementById('cntRE').textContent=allResults.filter(function(r){return r.setup!=='GOLDEN_RE'&&CROSS.indexOf(r.setup)<0&&r.setup!=='BB_EMA_MERGE';}).length;
+  document.getElementById('cntRE').textContent=allResults.filter(function(r){return r.setup!=='GOLDEN_RE'&&CROSS.indexOf(r.setup)<0;}).length;
   document.getElementById('cntCross').textContent=allResults.filter(function(r){return CROSS.indexOf(r.setup)>=0;}).length;
-  document.getElementById('cntMerge').textContent=allResults.filter(function(r){return r.setup==='BB_EMA_MERGE';}).length;
   if(filtered.length>0){
     document.getElementById('summaryRow').style.display='flex';
     document.getElementById('sumTotal').textContent=filtered.length;
@@ -1304,26 +1192,7 @@ function renderResults(){
         +fundStr
         +'</div></div>';
     }
-    var cfBdg=d.confirmed
-      ?'<span style="font-size:9px;background:#3fb95020;color:#3fb950;border:1px solid #3fb95060;padding:1px 5px;border-radius:4px;font-weight:700">MTF✓</span>'
-      :(d.setup==='BB_EMA_MERGE'&&d.tfLabel
-        ?'<span style="font-size:9px;background:'+MTF_LABELS[d.tfLabel==='H4'?'4h':d.tfLabel==='H1'?'1h':'15m'].color+'22;color:'+MTF_LABELS[d.tfLabel==='H4'?'4h':d.tfLabel==='H1'?'1h':'15m'].color+';border:1px solid '+MTF_LABELS[d.tfLabel==='H4'?'4h':d.tfLabel==='H1'?'1h':'15m'].color+'50;padding:1px 5px;border-radius:4px;font-weight:700">'+d.tfLabel+'</span>'
-        :'');
-
-    // Merge-specific detail panel
-    var mergePanel='';
-    if(d.setup==='BB_EMA_MERGE'){
-      mergePanel='<div style="margin-top:7px;background:#ff6ef710;border:1px solid #ff6ef730;border-radius:6px;padding:6px 10px">'
-        +'<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'
-        +'<div><div style="font-size:9px;color:#8b949e">MidBB↔EMA50</div><div style="font-size:13px;font-weight:800;color:#ff6ef7">'+d.gap+'%</div></div>'
-        +'<div><div style="font-size:9px;color:#8b949e">BB Width</div><div style="font-size:13px;font-weight:700;color:'+(d.isSqueeze?'#f0b429':'#8b949e')+'">'+d.bbWidthPct+'%</div></div>'
-        +'<div><div style="font-size:9px;color:#8b949e">MidBB Δ5c</div><div style="font-size:13px;font-weight:700;color:'+(d.isFlatBB?'#3fb950':'#e3b341')+'">'+d.midChangePct+'%</div></div>'
-        +'<div style="display:flex;gap:4px;flex-wrap:wrap">'
-        +(d.isFlatBB?'<span style="font-size:9px;background:#3fb95020;color:#3fb950;border:1px solid #3fb95050;padding:2px 6px;border-radius:4px;font-weight:700">📏 Flat BB</span>':'')
-        +(d.isSqueeze?'<span style="font-size:9px;background:#f0b42920;color:#f0b429;border:1px solid #f0b42950;padding:2px 6px;border-radius:4px;font-weight:700">🔥 Squeeze</span>':'')
-        +(parseFloat(d.gap)<0.3?'<span style="font-size:9px;background:#ff6ef720;color:#ff6ef7;border:1px solid #ff6ef750;padding:2px 6px;border-radius:4px;font-weight:700">⚡ Ultra Merge</span>':'')
-        +'</div></div></div>';
-    }
+    var cfBdg=d.confirmed?'<span style="font-size:9px;background:#3fb95020;color:#3fb950;border:1px solid #3fb95060;padding:1px 5px;border-radius:4px;font-weight:700">MTF✓</span>':'';
     var zBdg='<span style="font-size:9px;background:'+col+'20;color:'+col+';border:1px solid '+col+'40;padding:1px 5px;border-radius:4px">'+(d.direction==='LONG'?'Lo Zone':'Hi Zone')+'</span>';
     var bc3=d.confirmed?'#3fb95040':m.color+'30';
     html+='<div class="result-card" onclick="openModal('+i+')" style="border:1px solid '+bc3+'" onmouseover="this.style.borderColor=\'#58a6ff\'" onmouseout="this.style.borderColor=\''+bc3+'\'">'
@@ -1337,7 +1206,7 @@ function renderResults(){
       +'<div style="margin-top:6px"><div style="display:flex;justify-content:space-between"><span style="font-size:9px;color:#8b949e">Score</span><span style="font-size:9px;font-weight:700;color:'+sc+'">'+d.score+'%</span></div>'
       +'<div style="background:#21262d;border-radius:3px;height:3px;margin-top:2px"><div style="width:'+d.score+'%;height:100%;background:'+sc+';border-radius:3px"></div></div></div>'
       +'<div style="font-size:9px;color:#6e7681;margin-top:5px;line-height:1.7">'+(d.reason||'')+'</div>'
-      +mergePanel+mtfH+oiH+'</div>'
+      +mtfH+oiH+'</div>'
       +'<div class="ind-grid">'+indH+'</div>'
       +'<div style="flex-shrink:0;align-self:center"><canvas id="cv'+i+'" width="240" height="90" style="display:block;border-radius:4px;background:#0d1117"></canvas></div>'
       +'</div></div>';
@@ -1414,8 +1283,8 @@ function setTF(t){singleTF=t;var btns=document.querySelectorAll('#tfBtns .btn');
 function setDir(d){dirFilter=d;document.getElementById('dirAll').className='btn'+(d==='ALL'?' active':'');document.getElementById('dirLong').className='btn'+(d==='LONG'?' active':'');document.getElementById('dirShort').className='btn'+(d==='SHORT'?' active':'');renderResults();}
 function setTab(t){
   activeTab=t;setupFilter='ALL';
-  var map={GOLDEN:'#FFD700',RE:'#e3b341',CROSS:'#c084fc',MERGE:'#ff6ef7',TRACKER:'#58a6ff',JOURNAL:'#e3b341'};
-  ['GOLDEN','RE','CROSS','MERGE','TRACKER','JOURNAL'].forEach(function(k){
+  var map={GOLDEN:'#FFD700',RE:'#e3b341',CROSS:'#c084fc',TRACKER:'#58a6ff',JOURNAL:'#e3b341'};
+  ['GOLDEN','RE','CROSS','TRACKER','JOURNAL'].forEach(function(k){
     var el=document.getElementById('tab'+k.charAt(0)+k.slice(1).toLowerCase());
     if(!el) return;
     el.className='tab'+(t===k?' active':'');
@@ -1423,7 +1292,7 @@ function setTab(t){
     el.style.borderBottom=t===k?'2px solid '+map[k]:'2px solid #21262d';
   });
   var scanEls=['summaryRow','resultsContainer','emptyState','noResultState','reFilters','crossFilters'];
-  var isScan=t==='GOLDEN'||t==='RE'||t==='CROSS'||t==='MERGE';
+  var isScan=t==='GOLDEN'||t==='RE'||t==='CROSS';
   scanEls.forEach(function(id){var el=document.getElementById(id);if(el) el.style.display=isScan?'':'none';});
   if(isScan){
     document.getElementById('summaryRow').style.display=allResults.length>0?'flex':'none';
@@ -1431,10 +1300,7 @@ function setTab(t){
     document.getElementById('emptyState').style.display=allResults.length===0?'':'none';
     document.getElementById('reFilters').style.display=t==='RE'?'flex':'none';
     document.getElementById('crossFilters').style.display=t==='CROSS'?'flex':'none';
-    document.getElementById('mergeFilters').style.display=t==='MERGE'?'flex':'none';
-    var pool=t==='CROSS'?document.querySelectorAll('#crossFilters .filter-btn')
-            :t==='MERGE'?document.querySelectorAll('#mergeFilters .filter-btn')
-            :document.querySelectorAll('#reFilters .filter-btn');
+    var pool=document.querySelectorAll(t==='CROSS'?'#crossFilters .filter-btn':'#reFilters .filter-btn');
     document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
     if(pool[0]) pool[0].classList.add('active');
     renderResults();
@@ -1444,13 +1310,6 @@ function setTab(t){
   if(t==='JOURNAL') renderJournal();
 }
 function setSetupFilter(f,el){setupFilter=f;document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});if(el)el.classList.add('active');renderResults();}
-document.getElementById('mergeEnabled').addEventListener('change',function(){
-  var b=document.getElementById('mergeBadge');
-  b.textContent=this.checked?'ON':'OFF';
-  b.style.color=this.checked?'#ff6ef7':'#484f58';
-  b.style.background=this.checked?'#ff6ef722':'transparent';
-  b.style.borderColor=this.checked?'#ff6ef750':'#30363d';
-});
 document.getElementById('emaFilter').addEventListener('change',function(){var b=document.getElementById('emaBadge');b.textContent=this.checked?'ON':'OFF';b.style.color=this.checked?'#ff7b54':'#484f58';b.style.background=this.checked?'#ff7b5422':'transparent';saveSettings();});
 
 loadSettings();

@@ -818,24 +818,21 @@ function detectGoldenRE(ohlc) {
 function detectBest(ohlc) {
   if (!ohlc || !ohlc.closes || ohlc.closes.length < 22) return null;
   var useEMA = document.getElementById('emaFilter').checked;
-
   function emaOk(det) {
     if (!useEMA || !det.e50trend) return true;
-    return (det.direction === 'LONG' && det.e50trend === 'BULL') ||
-           (det.direction === 'SHORT' && det.e50trend === 'BEAR');
+    return (det.direction==='LONG'&&det.e50trend==='BULL')||(det.direction==='SHORT'&&det.e50trend==='BEAR');
   }
-
-  // Coba semua setup, ambil yang score tertinggi + emaOk
   var candidates = [];
-  var gre = detectGoldenRE(ohlc);  if (gre  && emaOk(gre))  candidates.push(gre);
-  var ext = detectExtreme(ohlc);   if (ext  && emaOk(ext))  candidates.push(ext);
-  var mom = detectMomentum(ohlc);  if (mom  && emaOk(mom))  candidates.push(mom);
-  var mhv = detectMHV(ohlc);       if (mhv  && emaOk(mhv))  candidates.push(mhv);
-
+  var gre = detectGoldenRE(ohlc);  if (gre && emaOk(gre))  candidates.push(gre);
+  var ext = detectExtreme(ohlc);   if (ext && emaOk(ext))  candidates.push(ext);
+  var mom = detectMomentum(ohlc);  if (mom && emaOk(mom))  candidates.push(mom);
+  var mhv = detectMHV(ohlc);       if (mhv && emaOk(mhv))  candidates.push(mhv);
   if (!candidates.length) return null;
-  candidates.sort(function(a, b) { return b.score - a.score; });
+  candidates.sort(function(a,b){return b.score-a.score;});
   return candidates[0];
 }
+
+function detectEMACross(ohlc){
   if(!ohlc||!ohlc.closes||ohlc.closes.length<25)return null;
   var cl=ohlc.closes,hi=ohlc.highs,lo=ohlc.lows;
   var price=cl[cl.length-1];
@@ -979,7 +976,7 @@ function detectEMACross(ohlc){
   var price=cl[cl.length-1],e50t=price>en?'BULL':'BEAR';
   var out=[];
   function cross(ap,bp2,an,bn2){if(ap<bp2&&an>=bn2)return'UP';if(ap>=bp2&&an<bn2)return'DOWN';return null;}
-  function base2(dir){return{price,ma5:sma(ohlc.lows,5),ma10:sma(ohlc.lows,10),ema50:en,e50trend:e50t,midBB:bn.mid,upperBB:bn.upper,lowerBB:bn.lower,closes:cl,maLabel:dir==='LONG'?'MA5Lo/MA10Lo':'MA5Hi/MA10Hi'};}
+  function base2(dir){return{price:price,ma5:sma(ohlc.lows,5),ma10:sma(ohlc.lows,10),ema50:en,e50trend:e50t,midBB:bn.mid,upperBB:bn.upper,lowerBB:bn.lower,closes:cl,maLabel:dir==='LONG'?'MA5Lo/MA10Lo':'MA5Hi/MA10Hi'};}
   var xM=cross(ep,bp.mid,en,bn.mid),xU=cross(ep,bp.upper,en,bn.upper),xL=cross(ep,bp.lower,en,bn.lower);
   if(xM){var d=xM==='UP'?'LONG':'SHORT';out.push(Object.assign(base2(d),{setup:'EMA_X_MID',direction:d,score:Math.max(40,Math.min(Math.round(95-pct(en,bn.mid)*5),99)),reason:'EMA50 cross '+(xM==='UP'?'UP':'DOWN')+' MidBB @ '+fmt(bn.mid)}));}
   if(xU){var d=xU==='UP'?'SHORT':'LONG';out.push(Object.assign(base2(d),{setup:'EMA_X_UPPER',direction:d,score:75,reason:'EMA50 '+(xU==='UP'?'tembus UpperBB →SHORT':'turun UpperBB →LONG')}));}

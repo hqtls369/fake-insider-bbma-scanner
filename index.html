@@ -1127,34 +1127,111 @@ async function testTelegram(){
   var ok=await sendTelegram('✅ <b>BBMA Scanner Pro</b> terhubung!');
   st.style.color=ok?'#3fb950':'#f85149';st.textContent=ok?'✅ Berhasil!':'❌ Gagal.';
 }
-function buildMsg(d,withEntry){
-  var m=META[d.setup]||{label:d.setup,icon:'●'};
-  var sym=d.sym.replace('USDT','/USDT');
-  var txt=m.icon+' <b>'+sym+'</b> — '+(d.direction==='LONG'?'🟢 LONG':'🔴 SHORT')
-    +'\n📐 <b>'+m.label+'</b> · Score '+d.score+'%'
-    +'\n💰 Price: <code>$'+fmt(d.price)+'</code>'
-    +(d.confirmed?'\n✅ <b>MTF CONFIRMED</b> H4·H1·M15':'')
-    +(d.ema4h?'\n📈 EMA50 MTF: H4 '+(d.ema4h==='BULL'?'▲':'▼')+' H1 '+(d.ema1h==='BULL'?'▲':'▼')+' M15 '+(d.ema15m==='BULL'?'▲':'▼'):d.e50trend?'\n📈 EMA50: '+(d.e50trend==='BULL'?'▲BULL':'▼BEAR'):'');
-  if(d.oi){
-    var h4t=d.oi.h4?(d.oi.h4.trend==='UP'?'▲':'▼')+d.oi.h4.chg.toFixed(2)+'%':'-';
-    var h1t=d.oi.h1?(d.oi.h1.trend==='UP'?'▲':'▼')+d.oi.h1.chg.toFixed(2)+'%':'-';
-    var m15t=d.oi.m15?(d.oi.m15.trend==='UP'?'▲':'▼')+d.oi.m15.chg.toFixed(2)+'%':'-';
-    txt+='\n📊 OI: H4 '+h4t+' H1 '+h1t+' M15 '+m15t;
-    if(d.oi.cvd){var c4=d.oi.cvd.h4,c1=d.oi.cvd.h1,c15=d.oi.cvd.m15;
-      txt+='\n📉 CVD: '+(c4?'H4 '+(c4.trend==='UP'?'▲':'▼')+' ':'')+(c1?'H1 '+(c1.trend==='UP'?'▲':'▼')+' ':'')+(c15?'M15 '+(c15.trend==='UP'?'▲':'▼'):'');}
-    if(d.oi.funding!==null&&d.oi.funding!==undefined) txt+='\n💸 FR: '+(d.oi.funding>0?'+':'')+d.oi.funding.toFixed(4)+'%';
+function buildMsg(d, withEntry) {
+  var m    = META[d.setup] || {label:d.setup, icon:'●'};
+  var sym  = d.sym.replace('USDT', '/USDT');
+  var isL  = d.direction === 'LONG';
+  var dir  = isL ? '🟢 LONG' : '🔴 SHORT';
+  var lev  = document.getElementById('leverage').value || '10';
+
+  // ── AI Note: ringkasan kondisi pasar ──
+  var notes = [];
+  if (d.ema4h && d.ema1h && d.ema15m) {
+    var emaAll = d.ema4h===d.ema1h && d.ema1h===d.ema15m;
+    if (emaAll) notes.push('EMA50 selaras '+(d.ema4h==='BULL'?'bullish':'bearish')+' H4·H1·M15');
+  } else if (d.e50trend) {
+    notes.push('EMA50 '+(d.e50trend==='BULL'?'bullish':'bearish'));
   }
-  if(withEntry&&d.lowerBB&&d.upperBB){
-    var e=calcEntry(d);
-    txt+='\n\n📍 <b>ENTRY: '+e.entryDesc+'</b>\nPrice: <code>$'+fmt(e.entry)+'</code>'
-      +'\n🛑 SL: <code>$'+fmt(e.sl)+'</code> (0.5%)'
-      +'\n🎯 TP1: <code>$'+fmt(e.tp1)+'</code> RR 1:'+e.rr1.toFixed(2)
-      +'\n🎯 TP2: <code>$'+fmt(e.tp2)+'</code> RR 1:'+e.rr2.toFixed(2)
-      +'\n🚀 TP3: <code>$'+fmt(e.tp3)+'</code> RR 1:'+e.rr3.toFixed(2)
-      +'\n💼 Margin: <code>$'+e.positionWithLev.toFixed(2)+'</code> Qty: <code>'+e.qty.toFixed(4)+'</code>';
+  if (d.oi) {
+    var oiBull = d.oi.bullTF >= 2, oiBear = d.oi.bearTF >= 2;
+    var cvdBull = d.oi.cvdBull >= 2, cvdBear = d.oi.cvdBear >= 2;
+    if (isL && oiBull)  notes.push('OI naik '+ d.oi.bullTF +'/3 TF — akumulasi LONG');
+    if (!isL && oiBear) notes.push('OI turun '+ d.oi.bearTF +'/3 TF — distribusi SHORT');
+    if (isL && cvdBull) notes.push('CVD positif — tekanan beli dominan');
+    if (!isL && cvdBear)notes.push('CVD negatif — tekanan jual dominan');
+    if (d.oi.funding !== null && d.oi.funding !== undefined) {
+      if (d.oi.funding > 0.05)  notes.push('Funding rate tinggi +'+d.oi.funding.toFixed(3)+'% — longs crowding');
+      if (d.oi.funding < -0.05) notes.push('Funding rate negatif '+d.oi.funding.toFixed(3)+'% — shorts crowding');
+    }
   }
-  txt+='\n\n<a href="https://www.tradingview.com/chart/?symbol=BINANCE:'+d.sym.replace('USDT','')+'USDTPERP">📈 Futures</a>'
-    +' · '+new Date().toLocaleTimeString();
+  if (d.setup === 'MHV')      notes.push('Volume hilang — potensi reversal atau breakout');
+  if (d.setup === 'EXTREME')  notes.push('MA keluar BB — zona extreme, waspadai reversal');
+  if (d.setup === 'MOMENTUM') notes.push('Candle momentum kuat, BB expanding');
+  if (d.setup === 'GOLDEN_RE')notes.push('Re-entry setelah momentum, CSAK terkonfirmasi');
+  if (!notes.length) notes.push('Setup terbentuk, tunggu konfirmasi volume');
+
+  var txt = '━━━━━━━━━━━━━━━━━\n';
+  txt += m.icon + ' <b>' + sym + '</b>   ' + dir + '   ' + lev + 'x\n';
+  txt += '🕐 TF Signal: <b>' + (d.signalTF || 'MTF') + '</b>   📐 <b>' + m.label + '</b>\n';
+  txt += '━━━━━━━━━━━━━━━━━\n';
+
+  if (withEntry && d.lowerBB && d.upperBB) {
+    var e = calcEntry(d);
+    var slPct  = Math.abs((e.sl    - e.entry) / e.entry * 100).toFixed(2);
+    var tp1Pct = Math.abs((e.tp1   - e.entry) / e.entry * 100).toFixed(2);
+    var tp2Pct = Math.abs((e.tp2   - e.entry) / e.entry * 100).toFixed(2);
+    var tp3Pct = Math.abs((e.tp3   - e.entry) / e.entry * 100).toFixed(2);
+    var slLevPct  = (parseFloat(slPct)  * parseFloat(lev)).toFixed(2);
+    var tp1LevPct = (parseFloat(tp1Pct) * parseFloat(lev)).toFixed(2);
+    var tp2LevPct = (parseFloat(tp2Pct) * parseFloat(lev)).toFixed(2);
+    var tp3LevPct = (parseFloat(tp3Pct) * parseFloat(lev)).toFixed(2);
+
+    txt += '💰 Entry: <code>' + fmt(e.entry) + '</code>  <i>(' + e.entryDesc + ')</i>\n';
+    txt += '🛡 SL: <code>' + fmt(e.sl) + '</code>  (-' + slPct + '% / -' + slLevPct + '% lev)\n';
+    txt += '━━━━━━━━━━━━━━━━━\n';
+    txt += '🎯 TP1: <code>' + fmt(e.tp1) + '</code>  (+' + tp1Pct + '% / +' + tp1LevPct + '% lev)\n';
+    txt += '⚡ TP2: <code>' + fmt(e.tp2) + '</code>  (+' + tp2Pct + '% / +' + tp2LevPct + '% lev)\n';
+    txt += '🔥 TP3: <code>' + fmt(e.tp3) + '</code>  (+' + tp3Pct + '% / +' + tp3LevPct + '% lev)\n';
+    txt += '━━━━━━━━━━━━━━━━━\n';
+    txt += '💼 Margin: <code>$' + e.positionWithLev.toFixed(2) + '</code>   Risk: <code>$' + e.riskAmt.toFixed(2) + '</code>   Qty: <code>' + e.qty.toFixed(4) + '</code>\n';
+    txt += '📊 Best RR: <b>1:' + Math.max(e.rr1,e.rr2,e.rr3).toFixed(2) + '</b>\n';
+    txt += '━━━━━━━━━━━━━━━━━\n';
+  }
+
+  // MTF EMA50
+  if (d.ema4h && d.ema1h && d.ema15m) {
+    txt += '📈 EMA50: '
+      + 'H4 '+(d.ema4h==='BULL'?'▲':'▼')+' '
+      + 'H1 '+(d.ema1h==='BULL'?'▲':'▼')+' '
+      + 'M15 '+(d.ema15m==='BULL'?'▲':'▼')+'\n';
+  }
+
+  // OI + CVD + Funding
+  if (d.oi) {
+    var h4t  = d.oi.h4  ? (d.oi.h4.trend==='UP'?'▲':'▼')+d.oi.h4.chg.toFixed(2)+'%'   : '-';
+    var h1t  = d.oi.h1  ? (d.oi.h1.trend==='UP'?'▲':'▼')+d.oi.h1.chg.toFixed(2)+'%'   : '-';
+    var m15t = d.oi.m15 ? (d.oi.m15.trend==='UP'?'▲':'▼')+d.oi.m15.chg.toFixed(2)+'%' : '-';
+    txt += '📊 OI: H4 '+h4t+'  H1 '+h1t+'  M15 '+m15t+'\n';
+    if (d.oi.cvd) {
+      var c4=d.oi.cvd.h4, c1=d.oi.cvd.h1, c15=d.oi.cvd.m15;
+      txt += '📉 CVD: '
+        +(c4  ? 'H4 '+(c4.trend==='UP'?'▲':'▼')+' ' : '')
+        +(c1  ? 'H1 '+(c1.trend==='UP'?'▲':'▼')+' ' : '')
+        +(c15 ? 'M15 '+(c15.trend==='UP'?'▲':'▼')   : '')+'\n';
+    }
+    if (d.oi.funding !== null && d.oi.funding !== undefined) {
+      var fc = d.oi.funding > 0.05 ? '🔴' : d.oi.funding < -0.05 ? '🟢' : '🟡';
+      txt += '💸 Funding: '+fc+' '+(d.oi.funding>0?'+':'')+d.oi.funding.toFixed(4)+'%\n';
+    }
+    txt += '━━━━━━━━━━━━━━━━━\n';
+  }
+
+  // Confidence score
+  txt += '🧠 Confidence Score: <b>' + d.score + '%</b>\n';
+
+  // AI Note
+  txt += '📝 AI Note: ' + notes.join(' · ') + '\n';
+  txt += '━━━━━━━━━━━━━━━━━\n';
+
+  // MTF confirm badge
+  if (d.confirmed) txt += '✅ <b>MTF CONFIRMED</b> H4·H1·M15\n';
+
+  // Chart links
+  var base = d.sym.replace('USDT','');
+  txt += '\n📈 <a href="https://www.tradingview.com/chart/?symbol=BINANCE:'+base+'USDTPERP">Futures Chart</a>'
+       + '  |  <a href="https://www.tradingview.com/chart/?symbol=BINANCE:'+d.sym+'">Spot</a>\n';
+  txt += '🕐 ' + new Date().toLocaleString('id-ID',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'});
+
   return txt;
 }
 async function sendAlert(d,isNew){

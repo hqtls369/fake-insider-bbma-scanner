@@ -1864,21 +1864,25 @@ function gannCalculate(){
   var fromLow=angles.map(function(a){return{label:a.label,n:a.n,deg:a.deg,price:Math.pow(sqLow+a.n,2),origin:'low'};}).filter(function(a){return a.price>low;});
   var fromHigh=angles.map(function(a){return{label:a.label,n:a.n,deg:a.deg,price:Math.pow(sqHigh-a.n,2),origin:'high'};}).filter(function(a){return a.price<high&&a.price>0;});
 
-  var tblLow=document.getElementById('gannTblLow');tblLow.innerHTML='';
+  var tblLow=document.getElementById('gannTblLow');
+  var htmlLow='';
   fromLow.forEach(function(a){
     var zone=gannGetZoneName(a.price,low,high);
     var bias=gannGetBias(zone.code,'low');
     var color=gannGetZoneColor(zone.code);
-    tblLow.innerHTML+='<tr><td style="color:#f5c842;font-size:10px">'+a.label+'</td><td class="gann-price-val">$'+gannFmt(a.price)+'</td><td style="color:'+color+';font-size:10px">'+zone.name+'</td><td><span class="gbadge '+bias.cls+'">'+bias.label+'</span></td></tr>';
+    htmlLow+='<tr><td style="color:#f5c842;font-size:10px">'+a.label+'</td><td class="gann-price-val">$'+gannFmt(a.price)+'</td><td style="color:'+color+';font-size:10px">'+zone.name+'</td><td><span class="gbadge '+bias.cls+'">'+bias.label+'</span></td></tr>';
   });
+  tblLow.innerHTML=htmlLow;
 
-  var tblHigh=document.getElementById('gannTblHigh');tblHigh.innerHTML='';
-  fromHigh.slice().reverse().forEach(function(a){
+  var tblHigh=document.getElementById('gannTblHigh');
+  var htmlHigh='';
+  fromHigh.forEach(function(a){
     var zone=gannGetZoneName(a.price,low,high);
     var bias=gannGetBias(zone.code,'high');
     var color=gannGetZoneColor(zone.code);
-    tblHigh.innerHTML+='<tr><td style="color:#ff3d5a;font-size:10px">'+a.label+'</td><td class="gann-price-val">$'+gannFmt(a.price)+'</td><td style="color:'+color+';font-size:10px">'+zone.name+'</td><td><span class="gbadge '+bias.cls+'">'+bias.label+'</span></td></tr>';
+    htmlHigh+='<tr><td style="color:#ff3d5a;font-size:10px">'+a.label+'</td><td class="gann-price-val">$'+gannFmt(a.price)+'</td><td style="color:'+color+';font-size:10px">'+zone.name+'</td><td><span class="gbadge '+bias.cls+'">'+bias.label+'</span></td></tr>';
   });
+  tblHigh.innerHTML=htmlHigh;
 
   var allLevels=[];
   allLevels.push({price:low,type:'quad',label:'SWING LOW',code:'q1',strength:2});
@@ -1889,6 +1893,7 @@ function gannCalculate(){
   fromLow.forEach(function(a){allLevels.push({price:a.price,type:'gann_low',label:'Gann '+a.label+' ↑',code:gannGetZoneName(a.price,low,high).code,strength:a.deg>=360?3:a.deg>=180?2:1});});
   fromHigh.forEach(function(a){allLevels.push({price:a.price,type:'gann_high',label:'Gann '+a.label+' ↓',code:gannGetZoneName(a.price,low,high).code,strength:a.deg>=360?3:a.deg>=180?2:1});});
 
+  allLevels.sort(function(a,b){return a.price-b.price;});
   var threshold=(high-low)*0.015,confluences=[],used=new Set();
   for(var ci=0;ci<allLevels.length;ci++){
     if(used.has(ci))continue;
@@ -1916,7 +1921,8 @@ function gannCalculate(){
   }
   confluences.sort(function(a,b){return b.strength-a.strength||b.price-a.price;});
 
-  var confTable=document.getElementById('gannConfTable');confTable.innerHTML='';
+  var confTable=document.getElementById('gannConfTable');
+  var htmlConf='';
   confluences.slice(0,12).forEach(function(c){
     var isHL=c.isConfl&&c.strength>=3;
     var dotCount=Math.round(c.strength);
@@ -1928,8 +1934,9 @@ function gannCalculate(){
     else if(c.signal.indexOf('TRAP')>=0){dotCls='off';sigBadge='gbadge-trap';}
     if(isHL)dotCls='on-gold';
     var dots='';for(var di=0;di<5;di++)dots+='<div class="gdot '+(di<dotCount?(isHL?'on-gold':dotCls):'off')+'"></div>';
-    confTable.innerHTML+='<div class="conf-row'+(isHL?' conf-highlighted':'')+'"><div class="gann-price-val"'+(isHL?' style="color:#f5c842"':'')+'>$'+gannFmt(c.price)+'</div><div style="color:rgba(205,214,244,.7);font-size:10px">'+c.labels.join(' + ')+'</div><div><div class="strength-bar">'+dots+'</div></div><div><span class="gbadge '+sigBadge+'">'+c.signal+'</span></div><div class="conf-col-action" style="color:rgba(205,214,244,.5);font-size:10px">'+c.action+'</div></div>';
+    htmlConf+='<div class="conf-row'+(isHL?' conf-highlighted':'')+'"><div class="gann-price-val"'+(isHL?' style="color:#f5c842"':'')+'>$'+gannFmt(c.price)+'</div><div style="color:rgba(205,214,244,.7);font-size:10px">'+c.labels.join(' + ')+'</div><div><div class="strength-bar">'+dots+'</div></div><div><span class="gbadge '+sigBadge+'">'+c.signal+'</span></div><div class="conf-col-action" style="color:rgba(205,214,244,.5);font-size:10px">'+c.action+'</div></div>';
   });
+  confTable.innerHTML=htmlConf;
 
   document.getElementById('gannResult').style.display='';
   gannRenderMap(low,high,q1,eq,q3,fromLow,fromHigh);
@@ -1965,13 +1972,13 @@ function gannRenderMap(low,high,q1,eq,q3,fromLow,fromHigh){
   drawLine(low,'#00e676',2,false,0.9);
   fromLow.forEach(function(a){if(a.price<=high*1.15)drawLine(a.price,'rgba(245,200,66,0.5)',1,true,0.7);});
   fromHigh.forEach(function(a){if(a.price>=low*0.85)drawLine(a.price,'rgba(178,75,255,0.5)',1,true,0.7);});
-  drawLabel(high,'$'+high.toFixed(0)+' — HIGH','#ff3d5a','left');
-  drawLabel(q3,'$'+q3.toFixed(0)+' — Q3 75%','#ff9800','left');
-  drawLabel(eq,'$'+eq.toFixed(0)+' — EQ 50%','#00e5ff','left');
-  drawLabel(q1,'$'+q1.toFixed(0)+' — Q1 25%','#00bcd4','left');
-  drawLabel(low,'$'+low.toFixed(0)+' — LOW','#00e676','left');
-  fromLow.slice(0,6).forEach(function(a){if(a.price<=high*1.15)drawLabel(a.price,a.label+'↑ $'+a.price.toFixed(0),'rgba(245,200,66,0.8)','right');});
-  fromHigh.slice(0,5).forEach(function(a){if(a.price>=low*0.85)drawLabel(a.price,a.label+'↓ $'+a.price.toFixed(0),'rgba(178,75,255,0.8)','right');});
+  drawLabel(high,'$'+gannFmt(high)+' — HIGH','#ff3d5a','left');
+  drawLabel(q3,'$'+gannFmt(q3)+' — Q3 75%','#ff9800','left');
+  drawLabel(eq,'$'+gannFmt(eq)+' — EQ 50%','#00e5ff','left');
+  drawLabel(q1,'$'+gannFmt(q1)+' — Q1 25%','#00bcd4','left');
+  drawLabel(low,'$'+gannFmt(low)+' — LOW','#00e676','left');
+  fromLow.slice(0,6).forEach(function(a){if(a.price<=high*1.15)drawLabel(a.price,a.label+'↑ $'+gannFmt(a.price),'rgba(245,200,66,0.8)','right');});
+  fromHigh.slice(0,5).forEach(function(a){if(a.price>=low*0.85)drawLabel(a.price,a.label+'↓ $'+gannFmt(a.price),'rgba(178,75,255,0.8)','right');});
   var leg=document.createElement('div');
   leg.style.cssText='position:absolute;bottom:8px;left:60px;display:flex;gap:14px';
   leg.innerHTML='<span style="font-family:Share Tech Mono,monospace;font-size:10px;color:rgba(245,200,66,0.8)">— Gann ↑ Low</span><span style="font-family:Share Tech Mono,monospace;font-size:10px;color:rgba(178,75,255,0.8)">— Gann ↓ High</span><span style="font-family:Share Tech Mono,monospace;font-size:10px;color:rgba(0,229,255,0.7)">— EQ / Quad</span>';

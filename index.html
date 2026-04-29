@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="BBMA Pro">
 <meta name="theme-color" content="#FFD700">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',system-ui,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;padding:16px}
@@ -58,6 +59,65 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0d1117;color:#e6edf3;m
 .countdown-ring{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;border:2px solid #FFD70050;font-size:11px;font-weight:700;color:#FFD700}
 input[type=text],input[type=number],select{background:#21262d;color:#e6edf3;border:1px solid #30363d;border-radius:5px;padding:4px 8px;font-size:11px}
 canvas{display:block;border-radius:4px}
+/* ── GANN S9 × LIQUIDITY QUADRANT ── */
+#gannPanel{--gold:#f5c842;--gold2:#e8a020;--gold3:#ffd97d;--cyan:#00e5ff;--red:#ff3d5a;--green:#00e676;--purple:#b24bff;--border:rgba(245,200,66,0.15);--border2:rgba(0,229,255,0.2);--glass:rgba(255,255,255,0.03);font-family:'Rajdhani',sans-serif;color:#cdd6f4}
+#gannPanel .input-card{background:var(--glass);border:1px solid var(--border);border-radius:4px;padding:20px;margin-bottom:18px;position:relative;overflow:hidden}
+#gannPanel .input-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+#gannPanel .input-card-title{font-family:'Orbitron',monospace;font-size:11px;letter-spacing:3px;color:var(--gold);margin-bottom:14px;opacity:.8}
+#gannPanel .input-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end}
+#gannPanel .field label{display:block;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--cyan);letter-spacing:2px;margin-bottom:6px;opacity:.8}
+#gannPanel .field input{width:100%;background:rgba(0,0,0,.4)!important;border:1px solid var(--border2)!important;border-radius:2px;color:var(--gold3)!important;font-family:'Orbitron',monospace;font-size:16px;font-weight:700;padding:10px 12px!important;outline:none;transition:border-color .2s,box-shadow .2s}
+#gannPanel .field input:focus{border-color:var(--gold)!important;box-shadow:0 0 16px rgba(245,200,66,.15)}
+#gannPanel .field input::placeholder{color:rgba(245,200,66,.2)!important;font-size:12px}
+#gannPanel .calc-btn{width:100%;background:linear-gradient(135deg,var(--gold2),var(--gold));border:none;border-radius:2px;color:#050810;font-family:'Orbitron',monospace;font-size:11px;font-weight:900;letter-spacing:2px;padding:12px;cursor:pointer;transition:all .2s}
+#gannPanel .calc-btn:hover{box-shadow:0 0 24px rgba(245,200,66,.3);transform:translateY(-1px)}
+#gannPanel .summary-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+#gannPanel .stat-box{background:var(--glass);border:1px solid var(--border);border-radius:3px;padding:10px 12px;text-align:center}
+#gannPanel .stat-label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:rgba(205,214,244,.4);margin-bottom:4px}
+#gannPanel .stat-val{font-family:'Orbitron',monospace;font-size:13px;font-weight:700}
+#gannPanel .visual-wrap{background:var(--glass);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:16px;position:relative;overflow:hidden}
+#gannPanel .visual-wrap::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent)}
+#gannPanel .section-title{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:3px;color:var(--cyan);margin-bottom:12px;opacity:.7;display:block}
+#gannPriceMap{width:100%;height:340px;position:relative;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.05);border-radius:2px;overflow:hidden}
+#gannPanel .tables-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+#gannPanel .table-card{background:var(--glass);border:1px solid var(--border);border-radius:4px;overflow:hidden}
+#gannPanel .table-head{padding:9px 12px;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;border-bottom:1px solid var(--border)}
+#gannPanel table{width:100%;border-collapse:collapse;font-family:'Share Tech Mono',monospace;font-size:11px}
+#gannPanel th{padding:6px 10px;color:rgba(205,214,244,.4);font-size:9px;letter-spacing:1px;text-align:left;border-bottom:1px solid rgba(255,255,255,.04)}
+#gannPanel td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:middle}
+#gannPanel tr:last-child td{border-bottom:none}
+#gannPanel tr:hover td{background:rgba(255,255,255,.02)}
+#gannPanel .gbadge{display:inline-block;padding:2px 6px;border-radius:2px;font-size:9px;letter-spacing:1px;font-weight:600}
+#gannPanel .gbadge-buy{background:rgba(0,230,118,.15);color:var(--green);border:1px solid rgba(0,230,118,.3)}
+#gannPanel .gbadge-sell{background:rgba(255,61,90,.15);color:var(--red);border:1px solid rgba(255,61,90,.3)}
+#gannPanel .gbadge-trap{background:rgba(178,75,255,.15);color:var(--purple);border:1px solid rgba(178,75,255,.3)}
+#gannPanel .gbadge-watch{background:rgba(0,229,255,.1);color:var(--cyan);border:1px solid rgba(0,229,255,.2)}
+#gannPanel .confluence-card{background:var(--glass);border:1px solid rgba(245,200,66,.25);border-radius:4px;overflow:hidden;margin-bottom:16px;position:relative}
+#gannPanel .confluence-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),var(--cyan),transparent)}
+#gannPanel .conf-row{display:grid;grid-template-columns:100px 1fr 90px 110px 110px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center}
+#gannPanel .conf-row.conf-header{background:rgba(0,0,0,.3);font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;color:rgba(205,214,244,.4)}
+#gannPanel .conf-row>div{padding:8px 10px;font-family:'Share Tech Mono',monospace;font-size:11px}
+#gannPanel .conf-row.conf-highlighted>div{background:rgba(245,200,66,.05)}
+#gannPanel .strength-bar{display:flex;gap:3px;align-items:center}
+#gannPanel .gdot{width:7px;height:7px;border-radius:50%}
+#gannPanel .gdot.on-gold{background:#f5c842;box-shadow:0 0 5px #f5c842}
+#gannPanel .gdot.on-cyan{background:#00e5ff;box-shadow:0 0 5px #00e5ff}
+#gannPanel .gdot.on-green{background:#00e676}
+#gannPanel .gdot.on-red{background:#ff3d5a}
+#gannPanel .gdot.off{background:rgba(255,255,255,.1)}
+#gannPanel .info-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+#gannPanel .info-box{background:var(--glass);border:1px solid var(--border);border-radius:3px;padding:12px}
+#gannPanel .info-box-title{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;margin-bottom:8px}
+#gannPanel .info-box ul{list-style:none;font-family:'Share Tech Mono',monospace;font-size:11px;line-height:1.9;color:rgba(205,214,244,.6)}
+#gannPanel .info-box ul li::before{content:'› ';color:#f5c842}
+#gannPanel .gann-price-val{color:#ffd97d;font-weight:700}
+@keyframes gannFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+#gannPanel .ganim{animation:gannFadeIn .35s ease forwards}
+#gannPanel .ganim-d1{animation-delay:.05s;opacity:0}
+#gannPanel .ganim-d2{animation-delay:.1s;opacity:0}
+#gannPanel .ganim-d3{animation-delay:.15s;opacity:0}
+#gannPanel .ganim-d4{animation-delay:.2s;opacity:0}
+@media(max-width:700px){#gannPanel .tables-grid{grid-template-columns:1fr}#gannPanel .summary-strip{grid-template-columns:1fr 1fr}#gannPanel .info-row{grid-template-columns:1fr}#gannPanel .input-row{grid-template-columns:1fr 1fr}#gannPanel .input-row .btn-wrap{grid-column:1/-1}#gannPanel .conf-row{grid-template-columns:80px 1fr 80px 90px}#gannPanel .conf-col-action{display:none}}
 </style>
 </head>
 <body>
@@ -210,6 +270,7 @@ canvas{display:block;border-radius:4px}
   <button class="tab" id="tabCross" onclick="setTab('CROSS')">✂️ EMA×BB <span id="cntCross" style="background:#21262d;color:#c084fc;font-size:9px;padding:1px 4px;border-radius:8px;margin-left:2px">0</span></button>
   <button class="tab" id="tabTracker" onclick="setTab('TRACKER')">🎯 Tracker</button>
   <button class="tab" id="tabJournal" onclick="setTab('JOURNAL')">📒 Journal <span id="cntJournal" style="background:#21262d;color:#e3b341;font-size:9px;padding:1px 4px;border-radius:8px;margin-left:2px">0</span></button>
+  <button class="tab" id="tabGann" onclick="setTab('GANN')" style="color:#f5c842">📐 Gann S9</button>
 </div>
 
 <div class="panel">
@@ -287,6 +348,74 @@ canvas{display:block;border-radius:4px}
     <div id="journalStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:12px"></div>
     <div id="journalList"></div>
     <div id="journalEmpty" style="text-align:center;padding:40px;color:#484f58;font-size:12px">Belum ada trade.<br>Klik card → Entry Modal → <strong style="color:#e3b341">📒 Catat Trade</strong></div>
+  </div>
+
+  <!-- Gann S9 × Liquidity Quadrant -->
+  <div id="gannPanel" style="display:none">
+    <div style="text-align:center;margin-bottom:18px">
+      <div style="font-family:'Orbitron',monospace;font-size:clamp(13px,3vw,20px);font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,#ffd97d,#f5c842,#e8a020);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.3">GANN S9 × LIQUIDITY QUADRANT</div>
+      <p style="font-size:10px;color:rgba(205,214,244,.5);letter-spacing:2px;margin-top:5px;font-family:'Share Tech Mono',monospace">XAUUSD · CONFLUENCE CALCULATOR · MTF FRAMEWORK</p>
+    </div>
+    <div class="input-card">
+      <div class="input-card-title">// INPUT SWING RANGE</div>
+      <div class="input-row">
+        <div class="field">
+          <label>SWING LOW ($)</label>
+          <input type="number" id="gannLow" placeholder="4000" step="0.01">
+        </div>
+        <div class="field">
+          <label>SWING HIGH ($)</label>
+          <input type="number" id="gannHigh" placeholder="4200" step="0.01">
+        </div>
+        <div class="btn-wrap field">
+          <label style="opacity:0">_</label>
+          <button class="calc-btn" onclick="gannCalculate()">CALCULATE ▶</button>
+        </div>
+      </div>
+    </div>
+    <div id="gannResult" style="display:none">
+      <div class="summary-strip ganim ganim-d1">
+        <div class="stat-box"><div class="stat-label">SWING RANGE</div><div class="stat-val gann-price-val" id="gannSRange">—</div></div>
+        <div class="stat-box"><div class="stat-label">EQUILIBRIUM</div><div class="stat-val" style="color:var(--cyan)" id="gannSEQ">—</div></div>
+        <div class="stat-box"><div class="stat-label">√ LOW</div><div class="stat-val" style="color:var(--green)" id="gannSSqLow">—</div></div>
+        <div class="stat-box"><div class="stat-label">√ HIGH</div><div class="stat-val" style="color:var(--red)" id="gannSSqHigh">—</div></div>
+      </div>
+      <div class="visual-wrap ganim ganim-d2">
+        <span class="section-title">// PRICE MAP — LIQUIDITY ZONES + GANN LEVELS</span>
+        <div id="gannPriceMap"></div>
+      </div>
+      <div class="tables-grid ganim ganim-d3">
+        <div class="table-card">
+          <div class="table-head" style="color:var(--green)">▲ GANN TARGETS FROM LOW</div>
+          <table><tr><th>ANGLE</th><th>PRICE</th><th>ZONE</th><th>BIAS</th></tr><tbody id="gannTblLow"></tbody></table>
+        </div>
+        <div class="table-card">
+          <div class="table-head" style="color:var(--red)">▼ GANN TARGETS FROM HIGH</div>
+          <table><tr><th>ANGLE</th><th>PRICE</th><th>ZONE</th><th>BIAS</th></tr><tbody id="gannTblHigh"></tbody></table>
+        </div>
+      </div>
+      <div class="confluence-card ganim ganim-d4">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border)"><span class="section-title" style="margin:0">// CONFLUENCE ZONES — RANKED BY STRENGTH</span></div>
+        <div class="conf-row conf-header">
+          <div>PRICE</div><div>CONFLUENCE</div><div>STRENGTH</div><div>SIGNAL</div><div class="conf-col-action">ACTION</div>
+        </div>
+        <div id="gannConfTable"></div>
+      </div>
+      <div class="info-row ganim ganim-d4">
+        <div class="info-box">
+          <div class="info-box-title" style="color:#f5c842">⚡ ENTRY CHECKLIST</div>
+          <ul><li>Harga di Confluence Zone</li><li>BBMA MHV / RE terbentuk M5</li><li>OI tidak spike saat harga naik</li><li>CVD divergence dari harga</li><li>M5 rejection / engulfing candle</li></ul>
+        </div>
+        <div class="info-box">
+          <div class="info-box-title" style="color:var(--cyan)">📐 MTF FRAMEWORK XAU</div>
+          <ul><li>H1 → Macro trend + Swing range</li><li>M15 → Setup + Gann/Quad level</li><li>M5 → Entry trigger BBMA</li><li>Max leverage sesuai volatilitas</li><li>H4 = TIDAK DIPAKAI untuk XAU</li></ul>
+        </div>
+        <div class="info-box">
+          <div class="info-box-title" style="color:var(--purple)">⚠️ PERINGATAN</div>
+          <ul><li>Gann = level target, bukan trigger</li><li>Selalu tunggu konfirmasi BBMA</li><li>XAU spread lebar, pakai limit</li><li>Recalculate tiap major swing baru</li><li>Trap zone = wait OI confirm dulu</li></ul>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1651,8 +1780,8 @@ function setTF(t){singleTF=t;var btns=document.querySelectorAll('#tfBtns .btn');
 function setDir(d){dirFilter=d;document.getElementById('dirAll').className='btn'+(d==='ALL'?' active':'');document.getElementById('dirLong').className='btn'+(d==='LONG'?' active':'');document.getElementById('dirShort').className='btn'+(d==='SHORT'?' active':'');renderResults();}
 function setTab(t){
   activeTab=t;setupFilter='ALL';
-  var map={GOLDEN:'#FFD700',RE:'#e3b341',CROSS:'#c084fc',TRACKER:'#58a6ff',JOURNAL:'#e3b341'};
-  ['GOLDEN','RE','CROSS','TRACKER','JOURNAL'].forEach(function(k){
+  var map={GOLDEN:'#FFD700',RE:'#e3b341',CROSS:'#c084fc',TRACKER:'#58a6ff',JOURNAL:'#e3b341',GANN:'#f5c842'};
+  ['GOLDEN','RE','CROSS','TRACKER','JOURNAL','GANN'].forEach(function(k){
     var el=document.getElementById('tab'+k.charAt(0)+k.slice(1).toLowerCase());
     if(!el)return;
     el.className='tab'+(t===k?' active':'');el.style.color=t===k?map[k]:'#484f58';el.style.borderBottom=t===k?'2px solid '+map[k]:'2px solid #21262d';
@@ -1672,10 +1801,185 @@ function setTab(t){
   }
   document.getElementById('trackerPanel').style.display=t==='TRACKER'?'':'none';
   document.getElementById('journalPanel').style.display=t==='JOURNAL'?'':'none';
+  document.getElementById('gannPanel').style.display=t==='GANN'?'':'none';
   if(t==='JOURNAL')renderJournal();
 }
 function setSetupFilter(f,el){setupFilter=f;document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});if(el)el.classList.add('active');renderResults();}
 document.getElementById('emaFilter').addEventListener('change',function(){var b=document.getElementById('emaBadge');b.textContent=this.checked?'ON':'OFF';b.style.color=this.checked?'#ff7b54':'#484f58';b.style.background=this.checked?'#ff7b5422':'transparent';saveSettings();});
+
+// ── GANN S9 × LIQUIDITY QUADRANT ──
+function gannFmt(n){return n.toFixed(2);}
+
+function gannGetZoneName(price,low,high){
+  var range=high-low,p=(price-low)/range;
+  if(p<0)return{name:'BELOW LOW',code:'below'};
+  if(p>1)return{name:'ABOVE HIGH',code:'above'};
+  if(p<=0.25)return{name:'Q1 — DISCOUNT',code:'q1'};
+  if(p<=0.50)return{name:'Q2 — EQ SOUTH',code:'q2'};
+  if(p<=0.75)return{name:'Q3 — EQ NORTH',code:'q3'};
+  return{name:'Q4 — PREMIUM',code:'q4'};
+}
+
+function gannGetBias(zone,origin){
+  if(origin==='low'){
+    if(zone==='q1'||zone==='q2')return{label:'BUY',cls:'gbadge-buy'};
+    if(zone==='q3')return{label:'WATCH',cls:'gbadge-watch'};
+    if(zone==='q4')return{label:'SELL TRAP?',cls:'gbadge-trap'};
+    if(zone==='above')return{label:'TRAP',cls:'gbadge-trap'};
+  }else{
+    if(zone==='q4'||zone==='q3')return{label:'SELL',cls:'gbadge-sell'};
+    if(zone==='q2')return{label:'WATCH',cls:'gbadge-watch'};
+    if(zone==='q1')return{label:'BUY TRAP?',cls:'gbadge-trap'};
+    if(zone==='below')return{label:'TRAP',cls:'gbadge-trap'};
+  }
+  return{label:'NEUTRAL',cls:'gbadge-watch'};
+}
+
+function gannGetZoneColor(code){
+  var m={q1:'#00e676',q2:'#00bcd4',q3:'#ff9800',q4:'#ff3d5a',above:'#b24bff',below:'#b24bff'};
+  return m[code]||'#cdd6f4';
+}
+
+function gannCalculate(){
+  var low=parseFloat(document.getElementById('gannLow').value);
+  var high=parseFloat(document.getElementById('gannHigh').value);
+  if(isNaN(low)||isNaN(high)||low<=0||high<=low){
+    alert('Masukkan Swing Low dan High yang valid. High harus lebih besar dari Low.');
+    return;
+  }
+  var range=high-low,eq=low+range*0.5,q1=low+range*0.25,q3=low+range*0.75;
+  var sqLow=Math.sqrt(low),sqHigh=Math.sqrt(high);
+
+  document.getElementById('gannSRange').textContent='$'+gannFmt(range);
+  document.getElementById('gannSEQ').textContent='$'+gannFmt(eq);
+  document.getElementById('gannSSqLow').textContent=gannFmt(sqLow);
+  document.getElementById('gannSSqHigh').textContent=gannFmt(sqHigh);
+
+  var angles=[
+    {label:'45°',n:0.125,deg:45},{label:'90°',n:0.25,deg:90},{label:'135°',n:0.375,deg:135},
+    {label:'180°',n:0.5,deg:180},{label:'270°',n:0.75,deg:270},{label:'360°',n:1.0,deg:360},
+    {label:'450°',n:1.25,deg:450},{label:'540°',n:1.5,deg:540},{label:'720°',n:2.0,deg:720}
+  ];
+
+  var fromLow=angles.map(function(a){return{label:a.label,n:a.n,deg:a.deg,price:Math.pow(sqLow+a.n,2),origin:'low'};}).filter(function(a){return a.price>low;});
+  var fromHigh=angles.map(function(a){return{label:a.label,n:a.n,deg:a.deg,price:Math.pow(sqHigh-a.n,2),origin:'high'};}).filter(function(a){return a.price<high&&a.price>0;});
+
+  var tblLow=document.getElementById('gannTblLow');tblLow.innerHTML='';
+  fromLow.forEach(function(a){
+    var zone=gannGetZoneName(a.price,low,high);
+    var bias=gannGetBias(zone.code,'low');
+    var color=gannGetZoneColor(zone.code);
+    tblLow.innerHTML+='<tr><td style="color:#f5c842;font-size:10px">'+a.label+'</td><td class="gann-price-val">$'+gannFmt(a.price)+'</td><td style="color:'+color+';font-size:10px">'+zone.name+'</td><td><span class="gbadge '+bias.cls+'">'+bias.label+'</span></td></tr>';
+  });
+
+  var tblHigh=document.getElementById('gannTblHigh');tblHigh.innerHTML='';
+  fromHigh.slice().reverse().forEach(function(a){
+    var zone=gannGetZoneName(a.price,low,high);
+    var bias=gannGetBias(zone.code,'high');
+    var color=gannGetZoneColor(zone.code);
+    tblHigh.innerHTML+='<tr><td style="color:#ff3d5a;font-size:10px">'+a.label+'</td><td class="gann-price-val">$'+gannFmt(a.price)+'</td><td style="color:'+color+';font-size:10px">'+zone.name+'</td><td><span class="gbadge '+bias.cls+'">'+bias.label+'</span></td></tr>';
+  });
+
+  var allLevels=[];
+  allLevels.push({price:low,type:'quad',label:'SWING LOW',code:'q1',strength:2});
+  allLevels.push({price:q1,type:'quad',label:'Q1 — 25%',code:'q1',strength:2});
+  allLevels.push({price:eq,type:'quad',label:'EQUILIBRIUM — 50%',code:'q2',strength:3});
+  allLevels.push({price:q3,type:'quad',label:'Q3 — 75%',code:'q4',strength:2});
+  allLevels.push({price:high,type:'quad',label:'SWING HIGH',code:'q4',strength:2});
+  fromLow.forEach(function(a){allLevels.push({price:a.price,type:'gann_low',label:'Gann '+a.label+' ↑',code:gannGetZoneName(a.price,low,high).code,strength:a.deg>=360?3:a.deg>=180?2:1});});
+  fromHigh.forEach(function(a){allLevels.push({price:a.price,type:'gann_high',label:'Gann '+a.label+' ↓',code:gannGetZoneName(a.price,low,high).code,strength:a.deg>=360?3:a.deg>=180?2:1});});
+
+  var threshold=(high-low)*0.015,confluences=[],used=new Set();
+  for(var ci=0;ci<allLevels.length;ci++){
+    if(used.has(ci))continue;
+    var group=[allLevels[ci]];
+    for(var cj=ci+1;cj<allLevels.length;cj++){
+      if(used.has(cj))continue;
+      if(Math.abs(allLevels[ci].price-allLevels[cj].price)<=threshold){group.push(allLevels[cj]);used.add(cj);}
+    }
+    used.add(ci);
+    var avgPrice=group.reduce(function(s,x){return s+x.price;},0)/group.length;
+    var totalStr=Math.min(5,group.reduce(function(s,x){return s+x.strength;},0));
+    var hasGann=group.some(function(x){return x.type.indexOf('gann')===0;});
+    var hasQuad=group.some(function(x){return x.type==='quad';});
+    var czone=gannGetZoneName(avgPrice,low,high);
+    var isGannFromLow=group.some(function(x){return x.type==='gann_low';});
+    var csignal,caction;
+    if(czone.code==='q1'){csignal='STRONG BUY';caction='BBMA RE M5 + CVD ↑';}
+    else if(czone.code==='q4'){csignal='STRONG SELL';caction='BBMA EXT M5 + OI flat';}
+    else if(czone.code==='q2'){csignal=isGannFromLow?'BUY WATCH':'SELL WATCH';caction='Tunggu konfirmasi M15';}
+    else if(czone.code==='q3'){csignal=isGannFromLow?'BUY WATCH':'SELL WATCH';caction='Tunggu OI direction';}
+    else if(czone.code==='above'){csignal='SELL TRAP';caction='Wait OI — likely fake BO';}
+    else if(czone.code==='below'){csignal='BUY TRAP';caction='Wait CVD — likely fake BD';}
+    else{csignal='NEUTRAL';caction='No trade';}
+    confluences.push({price:avgPrice,labels:group.map(function(x){return x.label;}),strength:totalStr,signal:csignal,action:caction,zone:czone,isConfl:hasGann&&hasQuad});
+  }
+  confluences.sort(function(a,b){return b.strength-a.strength||b.price-a.price;});
+
+  var confTable=document.getElementById('gannConfTable');confTable.innerHTML='';
+  confluences.slice(0,12).forEach(function(c){
+    var isHL=c.isConfl&&c.strength>=3;
+    var dotCount=Math.round(c.strength);
+    var dotCls='on-cyan',sigBadge='gbadge-watch';
+    if(c.signal.indexOf('STRONG BUY')>=0){dotCls='on-green';sigBadge='gbadge-buy';}
+    else if(c.signal.indexOf('STRONG SELL')>=0){dotCls='on-red';sigBadge='gbadge-sell';}
+    else if(c.signal.indexOf('BUY')>=0&&c.signal.indexOf('TRAP')<0){dotCls='on-green';sigBadge='gbadge-buy';}
+    else if(c.signal.indexOf('SELL')>=0&&c.signal.indexOf('TRAP')<0){dotCls='on-red';sigBadge='gbadge-sell';}
+    else if(c.signal.indexOf('TRAP')>=0){dotCls='off';sigBadge='gbadge-trap';}
+    if(isHL)dotCls='on-gold';
+    var dots='';for(var di=0;di<5;di++)dots+='<div class="gdot '+(di<dotCount?(isHL?'on-gold':dotCls):'off')+'"></div>';
+    confTable.innerHTML+='<div class="conf-row'+(isHL?' conf-highlighted':'')+'"><div class="gann-price-val"'+(isHL?' style="color:#f5c842"':'')+'>$'+gannFmt(c.price)+'</div><div style="color:rgba(205,214,244,.7);font-size:10px">'+c.labels.join(' + ')+'</div><div><div class="strength-bar">'+dots+'</div></div><div><span class="gbadge '+sigBadge+'">'+c.signal+'</span></div><div class="conf-col-action" style="color:rgba(205,214,244,.5);font-size:10px">'+c.action+'</div></div>';
+  });
+
+  document.getElementById('gannResult').style.display='';
+  gannRenderMap(low,high,q1,eq,q3,fromLow,fromHigh);
+}
+
+function gannRenderMap(low,high,q1,eq,q3,fromLow,fromHigh){
+  var map=document.getElementById('gannPriceMap');map.innerHTML='';
+  var padTop=20,padBot=20,mapH=map.offsetHeight||340,drawH=mapH-padTop-padBot;
+  var ext=(high-low)*0.3,minP=low-ext*0.2,maxP=high+ext*0.5,totalR=maxP-minP;
+  function yPos(price){return padTop+((maxP-price)/totalR)*drawH;}
+  function drawLine(price,color,width,dash,opacity){
+    opacity=opacity||1;var y=yPos(price);if(y<padTop-10||y>mapH-padBot+10)return;
+    var el=document.createElement('div');
+    el.style.cssText='position:absolute;left:60px;right:60px;top:'+y+'px;height:'+width+'px;opacity:'+opacity+';'+(dash?'background:repeating-linear-gradient(90deg,'+color+' 0,'+color+' 6px,transparent 6px,transparent 12px)':'background:'+color);
+    map.appendChild(el);
+  }
+  function drawLabel(price,text,color,side){
+    side=side||'left';var y=yPos(price);if(y<padTop-10||y>mapH-padBot+10)return;
+    var el=document.createElement('div');
+    el.style.cssText='position:absolute;top:'+y+'px;'+(side==='left'?'left:2px':'right:2px')+';transform:translateY(-50%);font-family:Share Tech Mono,monospace;font-size:10px;color:'+color+';white-space:nowrap;opacity:.9';
+    el.textContent=text;map.appendChild(el);
+  }
+  function drawZone(p1,p2,color){
+    var y1=yPos(Math.max(p1,p2)),y2=yPos(Math.min(p1,p2)),h=Math.abs(y2-y1);if(h<=0)return;
+    var el=document.createElement('div');
+    el.style.cssText='position:absolute;left:60px;right:60px;top:'+y1+'px;height:'+h+'px;background:'+color+';border-radius:1px';
+    map.appendChild(el);
+  }
+  drawZone(low,q1,'rgba(0,230,118,0.06)');drawZone(q1,eq,'rgba(0,188,212,0.04)');
+  drawZone(eq,q3,'rgba(255,152,0,0.04)');drawZone(q3,high,'rgba(255,61,90,0.06)');
+  drawLine(high,'#ff3d5a',2,false,0.9);drawLine(q3,'#ff9800',1,true,0.6);
+  drawLine(eq,'#00e5ff',2,false,0.8);drawLine(q1,'#00bcd4',1,true,0.6);
+  drawLine(low,'#00e676',2,false,0.9);
+  fromLow.forEach(function(a){if(a.price<=high*1.15)drawLine(a.price,'rgba(245,200,66,0.5)',1,true,0.7);});
+  fromHigh.forEach(function(a){if(a.price>=low*0.85)drawLine(a.price,'rgba(178,75,255,0.5)',1,true,0.7);});
+  drawLabel(high,'$'+high.toFixed(0)+' — HIGH','#ff3d5a','left');
+  drawLabel(q3,'$'+q3.toFixed(0)+' — Q3 75%','#ff9800','left');
+  drawLabel(eq,'$'+eq.toFixed(0)+' — EQ 50%','#00e5ff','left');
+  drawLabel(q1,'$'+q1.toFixed(0)+' — Q1 25%','#00bcd4','left');
+  drawLabel(low,'$'+low.toFixed(0)+' — LOW','#00e676','left');
+  fromLow.slice(0,6).forEach(function(a){if(a.price<=high*1.15)drawLabel(a.price,a.label+'↑ $'+a.price.toFixed(0),'rgba(245,200,66,0.8)','right');});
+  fromHigh.slice(0,5).forEach(function(a){if(a.price>=low*0.85)drawLabel(a.price,a.label+'↓ $'+a.price.toFixed(0),'rgba(178,75,255,0.8)','right');});
+  var leg=document.createElement('div');
+  leg.style.cssText='position:absolute;bottom:8px;left:60px;display:flex;gap:14px';
+  leg.innerHTML='<span style="font-family:Share Tech Mono,monospace;font-size:10px;color:rgba(245,200,66,0.8)">— Gann ↑ Low</span><span style="font-family:Share Tech Mono,monospace;font-size:10px;color:rgba(178,75,255,0.8)">— Gann ↓ High</span><span style="font-family:Share Tech Mono,monospace;font-size:10px;color:rgba(0,229,255,0.7)">— EQ / Quad</span>';
+  map.appendChild(leg);
+}
+
+document.getElementById('gannLow').value=4000;
+document.getElementById('gannHigh').value=4200;
 
 loadSettings();
 renderJournal();
